@@ -1,0 +1,3 @@
+#define FN_COMPILE_SSE2
+#define FN_COMPILE_SSE41
+
