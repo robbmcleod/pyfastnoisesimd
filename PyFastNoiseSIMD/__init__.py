@@ -12,5 +12,8 @@
 from pyfastnoisesimd.version import __version__
 from pyfastnoisesimd import extension as _ext
 
-from pyfastnoisesimd.helpers import generate
+from pyfastnoisesimd.helpers import generate, setNumWorkers
 
+from pyfastnoisesimd.cpuinfo import get_cpu_info
+cpu_info = get_cpu_info()
+setNumWorkers( cpu_info['count'] )

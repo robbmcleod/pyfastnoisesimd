@@ -542,6 +542,37 @@ PyFNS_GetNoiseSet(FNSObject *self, PyObject *args)
     return PyArray_SimpleNewFromData(3, dims, NPY_FLOAT32, data);
 }
 
+// void FastNoiseSIMD::FillNoiseSet(float* noiseSet, int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier)
+// float* GetNoiseSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
+PyDoc_STRVAR(FillNoiseSet__doc__,
+    "FillNoiseSet(float* noiseSet, int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier)\
+-- Fill a noise set.\n");
+static PyObject *
+PyFNS_FillNoiseSet(FNSObject *self, PyObject *args)
+{
+    // Fill an existing empty array, used for multi-threaded operation
+    npy_intp numpyArrayPtr;
+    int xStart, yStart, zStart;
+    npy_intp dims[3] = {0, 0, 0};
+    float scaleMod = 1.0;
+    const char *format = "Liiiiii|f";
+    float *data = NULL;
+
+    if (!PyArg_ParseTuple(args, format, &numpyArrayPtr, &zStart, &yStart, &xStart, &dims[0], &dims[1], &dims[2], &scaleMod))
+    {
+        return NULL;
+    }
+    
+    // Release GIL
+    Py_BEGIN_ALLOW_THREADS
+    data = (float *)numpyArrayPtr;
+    self->fns->FillNoiseSet( data, zStart, yStart, xStart, (int)dims[0], (int)dims[1], (int)dims[2], scaleMod );
+    Py_END_ALLOW_THREADS
+
+    Py_RETURN_NONE;
+}
+
+
 // float* GetSampledNoiseSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, int sampleScale);
 // float* GetWhiteNoiseSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
 // float* GetValueSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
@@ -578,7 +609,7 @@ static PyMethodDef FNS_methods[] = {
     {"SetPerturbFractalGain", (PyCFunction)PyFNS_SetPerturbFractalGain, METH_VARARGS, SetPerturbFractalGain__doc__},
     {"SetPerturbNormaliseLength", (PyCFunction)PyFNS_SetPerturbNormaliseLength, METH_VARARGS, SetPerturbNormaliseLength__doc__},
     {"GetNoiseSet", (PyCFunction)PyFNS_GetNoiseSet, METH_VARARGS, GetNoiseSet__doc__},
-
+    {"FillNoiseSet", (PyCFunction)PyFNS_FillNoiseSet, METH_VARARGS, FillNoiseSet__doc__},
     {NULL, NULL, 0, NULL},
 };
 

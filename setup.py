@@ -17,7 +17,8 @@ import platform
 import re
 import sys
 
-import cpuinfo
+sys.path.append( os.path.join(os.path.abspath('.'), 'PyFastNoiseSIMD')  )
+import cpuinfo # Is up one directory
 
 from setuptools import Extension
 from setuptools import setup

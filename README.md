@@ -3,12 +3,33 @@
 PyFastNoiseSIMD is a wrapper around Jordan Peck's synthetic noise library [FastNoise SIMD](https://github.com/Auburns/FastNoise-SIMD) which has been accelerated with SIMD
 instruction sets.  
 
-There is one and only one function exposed, `pyfastnoisesimd.generate` which has 
-a signature as follows:
+I have further accelerated it by multi-threading the generator.  The number of 
+threads used is set by (Defaults to the total number of virtual cores found on the 
+system).
+
+    pyfastnoisesimd.setNumWorkers( N_workers )
+
+Benckmark single-threaded (1 core, i5-3570K @ 3.5 GHz)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    Computed 4194304 voxels cellular noise in 0.2898170114122789 s
+        69.09776006037686 ns/voxel
+    Computed 4194304 voxels Perlin noise in 0.1920228191367772 s
+        45.78180769366675 ns/voxel
+
+Benchmark multi-threaded (4 cores, i5-3570K @ 3.5 GHz)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    Computed 4194304 voxels cellular noise in 0.079239338013734 s
+        18.89213037818289 ns/voxel
+    Computed 4194304 voxels Perlin noise in 0.0502796223675005 s
+        11.987596122622609 ns/voxel
+
+There is generator function exposed `pyfastnoisesimd.generate` which works as 
+follows:
 
     import pyfastnoisesimd as fns
     N = [512,512,512]
     seed = np.random.randint(2**31)
+    fns.setNumWorkers( fns.cpu_info['count'] )
     cellular = fns.generate( size=N, start=[0,0,0], 
               seed=seed, freq=0.005, noiseType='Cellular', axisScales=[N[-1]/N[0],1.0,1.0], 
               fracType='FBM', fracOctaves=4, 
@@ -19,7 +40,8 @@ a signature as follows:
               perturbType='Gradient', perturbAmp=1.0, perturbFreq=0.7, perturbOctaves=5,
               perturbLacunarity=2.0, perturbGain=0.5, perturbNormLen=1.0 )
 
-Here `cellular` is of type Numpy `ndarray`.  
+The return is a `numpy.ndarray`.  A more extensive example is found in 
+`example/test_fns.py`.
 
 Valid strings for `noiseType` and `cellNoiseLookup`:
     [ 'Value', 'ValueFractal', 'Perlin', 'PerlinFractal', 'Simplex', 'SimplexFractal', 'WhiteNoise', 'Cellular', 
