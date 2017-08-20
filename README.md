@@ -29,14 +29,14 @@ follows:
 The return is a `numpy.ndarray`.  A more extensive example is found in 
 `example/test_fns.py`.
 
-###Benckmark single-threaded (1 core, i5-3570K @ 3.5 GHz)
+### Benckmark single-threaded (1 core, i5-3570K @ 3.5 GHz)
     array of shape [4,1024,1024]
     Computed 4194304 voxels cellular noise in 0.2898170114122789 s
         69.09776006037686 ns/voxel
     Computed 4194304 voxels Perlin noise in 0.1920228191367772 s
         45.78180769366675 ns/voxel
 
-###Benchmark multi-threaded (4 cores, i5-3570K @ 3.5 GHz)
+### Benchmark multi-threaded (4 cores, i5-3570K @ 3.5 GHz)
     array of shape [4,1024,1024]
     Computed 4194304 voxels cellular noise in 0.079239338013734 s
         18.89213037818289 ns/voxel
