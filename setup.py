@@ -25,9 +25,15 @@ from setuptools import setup
 from glob import glob
 from numpy import get_include
 
+# MRCZ version
+major_ver = 0
+minor_ver = 1
+nano_ver = 1
 
-# FastNoiseSIMD version
-VERSION = open('VERSION').read().strip()
+branch = ''
+
+VERSION = "%d.%d.%d%s" % (major_ver, minor_ver, nano_ver, branch)
+
 # Create the version.py file
 open('PyFastNoiseSIMD/version.py', 'w').write('__version__ = "%s"\n' % VERSION)
 
@@ -43,6 +49,9 @@ inc_dirs = [get_include()]
 lib_dirs = []
 libs = []
 def_macros = []
+
+with open('README.md') as fh:
+    long_desc = fh.read()
 
 # Auto-detect the architecture and set the CFLAGS appropriately.
 cpu_info = cpuinfo.get_cpu_info()
@@ -131,8 +140,10 @@ with open( 'PyFastNoiseSIMD/FastNoiseSIMD/amd64_arch.h', 'wb') as fh:
         if FOUND_NEON: # Detected by compiler flags
             pass
 
+# List classifiers:
+# https://pypi.python.org/pypi?%3Aaction=list_classifiers
 classifiers = """\
-Development Status :: 4 - Beta 
+Development Status :: 5 - Production/Stable
 Intended Audience :: Developers
 Intended Audience :: Information Technology
 License :: OSI Approved :: BSD License
@@ -141,7 +152,7 @@ Programming Language :: Python :: 3.4
 Programming Language :: Python :: 3.5
 Programming Language :: Python :: 3.6
 Topic :: Software Development :: Libraries :: Python Modules
-Topic :: Simulation :: Noise
+Topic :: Multimedia :: Graphics :: 3D Modeling
 Operating System :: Microsoft :: Windows
 Operating System :: Unix
 """
@@ -149,14 +160,7 @@ Operating System :: Unix
 setup(name = "pyfastnoisesimd",
       version = VERSION,
       description = 'FastNoiseSIMD',
-      long_description = """\
-
-FastNoise SIMD is the SIMD implementation of my noise library FastNoise. It aims
-to provide faster performance through the use of intrinsic(SIMD) CPU functions. 
-Vectorisation of the code allows noise functions to process data in sets of 
-4/8/16 increasing performance by 700% in some cases (Simplex).
-
-""",
+      long_description = long_desc,
       classifiers = [c for c in classifiers.split("\n") if c],
       author = 'Robert A. McLeod',
       author_email = 'robbmcleod@gmail.com',
