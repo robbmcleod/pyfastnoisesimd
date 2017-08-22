@@ -1,7 +1,11 @@
 # PyFastNoiseSIMD
 
 PyFastNoiseSIMD is a wrapper around Jordan Peck's synthetic noise library [FastNoise SIMD](https://github.com/Auburns/FastNoise-SIMD) which has been accelerated with SIMD
-instruction sets.  
+instruction sets.  It may be installed via pip:
+
+    pip install pyfastnoisesimd
+    
+Source and Windows Python 3.6 wheels are provided.
 
 I have further accelerated it by multi-threading the generator.  The number of 
 threads used is set by (Defaults to the total number of virtual cores found on the 
@@ -63,10 +67,6 @@ Valid strings for `callDistFunc`:
 If you want a more direct interface with the underlying library you may use the
 `pyfastsimd._ext` module, which is a function-for-function mapping to the C++ 
 code.
-
-Note that `generate` releases the Python GIL.  In the future I will add a wrapper 
-around `concurrent.futures` to mutli-thread the noise generation for large-ish 
-3D arrays.  
 
 # C-Interface 
 
