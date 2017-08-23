@@ -595,7 +595,9 @@ class CPUID(object):
 		return max_extension_support
 
 	# http://en.wikipedia.org/wiki/CPUID#EAX.3D1:_Processor_Info_and_Feature_Bits
+	# https://stackoverflow.com/questions/6121792/how-to-check-if-a-cpu-supports-the-sse3-instruction-set
 	def get_flags(self, max_extension_support):
+	
 		# EDX
 		edx = self._run_asm(
 			self._one_eax(),
@@ -689,9 +691,29 @@ class CPUID(object):
 
 		# https://en.wikipedia.org/wiki/CPUID#EAX.3D7.2C_ECX.3D0:_Extended_Features
 		if max_extension_support == 7:
+			# RAM: add support for new AVX512 and similar instructions.
+			# Wikipedia suggests the EAX register must be set to = 7
+			# Unfortunately I cannot test this...
+			extended_flags.update( {
+				'bmi1':         	is_bit_set(ebx, 3),
+				'hle':				is_bit_set(ebx, 4),
+				'avx2':         	is_bit_set(ebx, 5),
+				'avx512f':      	is_bit_set(ebx, 16), # foundation
+				'avx512dq':     	is_bit_set(ebx, 17), # double-quad word
+				'rdseed':       	is_bit_set(ebx, 18),
+				'avx512ifma':   	is_bit_set(ebx, 21), # integer fused multiply-add
+				'avx512pf':     	is_bit_set(ebx, 26), # pre-fetch
+				'avx512er':     	is_bit_set(ebx, 27), # exponential and reciprocal
+				'avx512cd':     	is_bit_set(ebx, 28), # conflict detection
+				'sha':          	is_bit_set(ebx, 29), 
+				'avx512bw':     	is_bit_set(ebx, 30), # byte and word 
+				'avx512vl':    	 	is_bit_set(ebx, 31), # vector-length
+				'avx512vbmi':  		is_bit_set(ecx, 1),  # vector bit manipulation
+				'avx512_4vnniw':	is_bit_set(edx, 2),  # neural-network
+				'avx512_4fmaps':	is_bit_set(edx, 3),  # multiply-accumulate float-32
+			})
 			pass
-			# FIXME: Are we missing all these flags too?
-			# avx2 et cetera ...
+
 
 		# https://en.wikipedia.org/wiki/CPUID#EAX.3D80000001h:_Extended_Processor_Info_and_Feature_Bits
 		if max_extension_support >= 0x80000001:
@@ -712,7 +734,7 @@ class CPUID(object):
 			)
 
 			# Get the extended CPU flags
-			extended_flags = {
+			extended_flags.update( {
 				'fpu' : is_bit_set(ebx, 0),
 				'vme' : is_bit_set(ebx, 1),
 				'de' : is_bit_set(ebx, 2),
@@ -778,11 +800,11 @@ class CPUID(object):
 				#'reserved' : is_bit_set(ecx, 29),
 				#'reserved' : is_bit_set(ecx, 30),
 				#'reserved' : is_bit_set(ecx, 31)
-			}
+			} )
 
 		# Get a list of only the flags that are true
 		extended_flags = [k for k, v in extended_flags.items() if v]
-		flags += extended_flags
+		flags.update( extended_flags )
 
 		flags.sort()
 		return flags
