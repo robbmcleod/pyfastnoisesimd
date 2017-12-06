@@ -38,7 +38,7 @@
 struct FNSObject
 {
     PyObject_HEAD
-        FastNoiseSIMD *fns;
+    FastNoiseSIMD *fns;
 };
 
 static void
