@@ -4,7 +4,9 @@ import pyfastnoisesimd as fns
 import time
 import numpy.testing as npt
 
-N = [4,1024,1024]
+# N_thread = fns.cpu_info['count']
+N_thread = 8
+N = [8,1024,1024]
 
 SEED_CELL = np.random.randint(2**31)
 SEED_PERLIN = np.random.randint(2**31)
@@ -32,13 +34,13 @@ perlin_s = fns.generate( size=N, start=[0,0,0],
 t2 = time.perf_counter()
 
 print( "#### Single threaded mode ####")
-print( "Computed {} voxels cellular noise in {} s".format( np.prod(N), t1-t0) )
-print( "    {} ns/voxel".format( 1E9*(t1-t0)/np.prod(N) ) )
-print( "Computed {} voxels Perlin noise in {} s".format( np.prod(N), t2-t1) )
-print( "    {} ns/voxel".format( 1E9*(t2-t1)/np.prod(N) ) )
+print( "Computed {} voxels cellular noise in {:.3f} s".format( np.prod(N), t1-t0) )
+print( "    {:.1f} ns/voxel".format( 1E9*(t1-t0)/np.prod(N) ) )
+print( "Computed {} voxels Perlin noise in {:.3f} s".format( np.prod(N), t2-t1) )
+print( "    {:.1f} ns/voxel".format( 1E9*(t2-t1)/np.prod(N) ) )
 print( "" )
 
-N_thread = fns.cpu_info['count']
+
 fns.setNumWorkers(N_thread)
 t3 = time.perf_counter()
 # Plot cellular noise with a gradient perturbation
@@ -62,23 +64,26 @@ perlin = fns.generate( size=N, start=[0,0,0],
 t5 = time.perf_counter()
 
 print( "#### Multi-threaded ({} threads) mode ####".format(N_thread) )
-print( "Computed {} voxels cellular noise in {} s".format( np.prod(N), t4-t3) )
-print( "    {} ns/voxel".format( 1E9*(t4-t3)/np.prod(N) ) )
-print( "Computed {} voxels Perlin noise in {} s".format( np.prod(N), t5-t4) )
-print( "    {} ns/voxel".format( 1E9*(t5-t4)/np.prod(N) ) )
+print( "Computed {} voxels cellular noise in {:.3f} s".format( np.prod(N), t4-t3) )
+print( "    {:.1f} ns/voxel".format( 1E9*(t4-t3)/np.prod(N) ) )
+print( "    {:.1f} % thread scaling".format( (t1-t0)/(t4-t3)*100.0  ) )
+print( "Computed {} voxels Perlin noise in {:.3f} s".format( np.prod(N), t5-t4) )
+print( "    {:.1f} ns/voxel".format( 1E9*(t5-t4)/np.prod(N) ) )
+print( "    {:.1f} % thread scaling".format( (t2-t1)/(t5-t4)*100.0  ) )
+
 
 # Check that the results are the same from single and multi-threading
 npt.assert_array_almost_equal( cellular, cellular_s )
 npt.assert_array_almost_equal( perlin, perlin_s )
 
-
+'''
 # Simple plotting.  matplotlib can also make movies.
 plt.figure()
 figManager = plt.get_current_fig_manager()
 # Tkinter
-figManager.window.state('zoomed')
+# figManager.window.state('zoomed')
 # Qt
-# figManager.window.showMaximized()
+figManager.window.showMaximized()
 for J in range(N[0]):
     plt.subplot(121)
     plt.imshow( cellular[J,:,:] )
@@ -88,3 +93,4 @@ for J in range(N[0]):
     plt.title( "Perlin #{}".format(J) )
     plt.pause(0.5)
 
+'''

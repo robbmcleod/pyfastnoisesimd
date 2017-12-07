@@ -35,17 +35,19 @@ The return is a `numpy.ndarray`.  A more extensive example is found in
 
 ### Benckmark single-threaded (1 core, i5-3570K @ 3.5 GHz)
     array of shape [4,1024,1024]
-    Computed 4194304 voxels cellular noise in 0.2898170114122789 s
-        69.09776006037686 ns/voxel
-    Computed 4194304 voxels Perlin noise in 0.1920228191367772 s
-        45.78180769366675 ns/voxel
+    Computed 4194304 voxels cellular noise in 0.289 s
+        69.0 ns/voxel
+    Computed 4194304 voxels Perlin noise in 0.192 s
+        45.7 ns/voxel
 
 ### Benchmark multi-threaded (4 cores, i5-3570K @ 3.5 GHz)
     array of shape [4,1024,1024]
-    Computed 4194304 voxels cellular noise in 0.079239338013734 s
-        18.89213037818289 ns/voxel
-    Computed 4194304 voxels Perlin noise in 0.0502796223675005 s
-        11.987596122622609 ns/voxel
+    Computed 4194304 voxels cellular noise in 0.079 s
+        18.8 ns/voxel
+        365 % thread scaling
+    Computed 4194304 voxels Perlin noise in 0.050 s
+        11.9 ns/voxel
+        384 % thread scaling
 
 Valid strings for `noiseType` and `cellNoiseLookup`:
     [ 'Value', 'ValueFractal', 'Perlin', 'PerlinFractal', 'Simplex', 'SimplexFractal', 'WhiteNoise', 'Cellular', 
@@ -67,6 +69,18 @@ Valid strings for `callDistFunc`:
 If you want a more direct interface with the underlying library you may use the
 `pyfastsimd._ext` module, which is a function-for-function mapping to the C++ 
 code.
+
+## Release Notes
+
+### 0.1.3
+
+* Fixed bug on multithreading; current approach splits arrays up to min(threads, array.shape[0])
+
+### 0.1.2
+
+* Added MANIFEST.in file for source distribution on PyPI
+
+
 
 # C-Interface 
 
