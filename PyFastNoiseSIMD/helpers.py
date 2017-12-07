@@ -89,7 +89,6 @@ def generate( size=[1,1024,1024], start=[0,0,0],
     numChunks = np.minimum( _asyncExecutor._max_workers, size[chunkAxis] )
 
     chunkedNoise = np.array_split( noise, numChunks, axis=chunkAxis )
-    [print( start ) for start in np.array_split( np.arange(size[chunkAxis]), numChunks ) ]
     chunkIndices = [ start[0] for start in np.array_split( np.arange(size[chunkAxis]), numChunks )]
 
     workers = []

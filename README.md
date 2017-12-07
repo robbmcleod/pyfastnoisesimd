@@ -72,7 +72,7 @@ code.
 
 ## Release Notes
 
-### 0.1.3
+### 0.1.4
 
 * Fixed bug on multithreading; current approach splits arrays up to min(threads, array.shape[0])
 
