@@ -72,6 +72,10 @@ code.
 
 ## Release Notes
 
+### 0.1.5
+
+* Using all lower-case directories for *nix.
+
 ### 0.1.4
 
 * Fixed bug on multithreading; current approach splits arrays up to min(threads, array.shape[0])

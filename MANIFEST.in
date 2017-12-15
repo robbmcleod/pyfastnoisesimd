@@ -1,4 +1,4 @@
-README.md
-LICENSE
+include README.md
+include LICENSE
 recursive-include . *.cpp
 recursive-include . *.h

@@ -8,7 +8,7 @@
 #include <numpy/ndarrayobject.h>
 #include <numpy/arrayscalars.h>
 
-#include "FastNoiseSIMD/FastNoiseSIMD.h"
+#include "fastnoisesimd/FastNoiseSIMD.h"
 
 #define DEFAULT_SEED 42
 #define CHARP(s) ((char *)(s))
