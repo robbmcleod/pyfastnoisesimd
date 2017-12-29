@@ -788,7 +788,6 @@ class CPUID(object):
                 b"\x89\xD8"         # mov ax,bx
                 b"\xC3"             # ret
             )
-            print( f'Checking Extended features level 7: ebx = {ebx}')
             
             extended_flags.update( {
                 'bmi1':         	is_bit_set(ebx, 3),
