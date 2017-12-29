@@ -691,7 +691,6 @@ class CPUID(object):
         # Get the Extended CPU flags
         extended_flags = {}
 
-        print( f'max_extension_support = {max_extension_support}')
         # https://en.wikipedia.org/wiki/CPUID#EAX.3D80000001h:_Extended_Processor_Info_and_Feature_Bits
         if max_extension_support >= 0x80000001:
             # EBX # FIXME: This may need to be EDX instead
@@ -1401,7 +1400,7 @@ def get_cpu_info_from_registry():
             'ss' : is_set(27), # self snoop
             #'reserved2' : is_set(28), # reserved
             'tm' : is_set(29), # Automatic clock control
-            'ia64' : is_set(30), # IA64 instructions
+            'ia64' : is_set(30), # IA64 instructionsF
             '3dnow' : is_set(31) # 3DNow! instructions available
         }
 
@@ -1558,11 +1557,6 @@ def main():
     except Exception as err:
         sys.stderr.write(str(err) + "\n")
         sys.exit(1)
-
-    # cpuid = CPUID()
-    # max_support = cpuid.get_max_extension_support()
-    # print( f'Max extension: {max_support}' )
-    # print( f'Flags: {cpuid.get_flags(max_support)}' )
 
     info = get_cpu_info()
     
