@@ -24,11 +24,12 @@
 //
 // The developer's email is jorzixdan.me2@gzixmail.com (for great email, take
 // off every 'zix'.)
-//
+
 
 #include "FastNoiseSIMD.h"
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <algorithm>
 #include <cstdint>
 
@@ -330,6 +331,7 @@ void FastNoiseSIMD::FillVectorSet(FastNoiseVectorSet* vectorSet, int xSize, int 
 	}
 }
 
+
 FastNoiseVectorSet* FastNoiseSIMD::GetSamplingVectorSet(int sampleScale, int xSize, int ySize, int zSize)
 {
 	FastNoiseVectorSet* vectorSet = new FastNoiseVectorSet();
@@ -441,6 +443,7 @@ void FastNoiseSIMD::FillNoiseSet(float* noiseSet, int xStart, int yStart, int zS
 
 void FastNoiseSIMD::FillNoiseSet(float* noiseSet, FastNoiseVectorSet* vectorSet, float xOffset, float yOffset, float zOffset)
 {
+
 	switch (m_noiseType)
 	{
 	case Value:
@@ -533,6 +536,7 @@ void FastNoiseSIMD::SetCellularDistance2Indicies(int cellularDistanceIndex0, int
 	m_cellularDistanceIndex0 = std::min(std::max(m_cellularDistanceIndex0, 0), FN_CELLULAR_INDEX_MAX);
 	m_cellularDistanceIndex1 = std::min(std::max(m_cellularDistanceIndex1, 0), FN_CELLULAR_INDEX_MAX);
 }
+
 
 void FastNoiseVectorSet::Free()
 {

@@ -158,6 +158,7 @@ class DataSource(object):
         hz_actual = to_hz_string(hz_actual)
         return hz_actual
 
+    # https://msdn.microsoft.com/en-us/library/windows/desktop/ms724482(v=vs.85).aspx
     @staticmethod
     def winreg_feature_bits():
         key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"Hardware\Description\System\CentralProcessor\0")
@@ -522,6 +523,7 @@ class CPUID(object):
                 b"\x40"             # inc ax
             )
 
+
     # http://en.wikipedia.org/wiki/CPUID#EAX.3D0:_Get_vendor_ID
     def get_vendor_id(self):
         # EBX
@@ -689,32 +691,7 @@ class CPUID(object):
         # Get the Extended CPU flags
         extended_flags = {}
 
-        # https://en.wikipedia.org/wiki/CPUID#EAX.3D7.2C_ECX.3D0:_Extended_Features
-        if max_extension_support == 7:
-            # RAM: add support for new AVX512 and similar instructions.
-            # Wikipedia suggests the EAX register must be set to = 7
-            # Unfortunately I cannot test this...
-            extended_flags.update( {
-                'bmi1':         	is_bit_set(ebx, 3),
-                'hle':				is_bit_set(ebx, 4),
-                'avx2':         	is_bit_set(ebx, 5),
-                'avx512f':      	is_bit_set(ebx, 16), # foundation
-                'avx512dq':     	is_bit_set(ebx, 17), # double-quad word
-                'rdseed':       	is_bit_set(ebx, 18),
-                'avx512ifma':   	is_bit_set(ebx, 21), # integer fused multiply-add
-                'avx512pf':     	is_bit_set(ebx, 26), # pre-fetch
-                'avx512er':     	is_bit_set(ebx, 27), # exponential and reciprocal
-                'avx512cd':     	is_bit_set(ebx, 28), # conflict detection
-                'sha':          	is_bit_set(ebx, 29), 
-                'avx512bw':     	is_bit_set(ebx, 30), # byte and word 
-                'avx512vl':    	 	is_bit_set(ebx, 31), # vector-length
-                'avx512vbmi':  		is_bit_set(ecx, 1),  # vector bit manipulation
-                'avx512_4vnniw':	is_bit_set(edx, 2),  # neural-network
-                'avx512_4fmaps':	is_bit_set(edx, 3),  # multiply-accumulate float-32
-            })
-            pass
-
-
+        print( f'max_extension_support = {max_extension_support}')
         # https://en.wikipedia.org/wiki/CPUID#EAX.3D80000001h:_Extended_Processor_Info_and_Feature_Bits
         if max_extension_support >= 0x80000001:
             # EBX # FIXME: This may need to be EDX instead
@@ -802,9 +779,39 @@ class CPUID(object):
                 #'reserved' : is_bit_set(ecx, 31)
             } )
 
+         # https://en.wikipedia.org/wiki/CPUID#EAX.3D7.2C_ECX.3D0:_Extended_Features
+        if max_extension_support >= 0x00000007:
+            
+            # RAM: add support for new AVX2,  AVX512 and similar instructions.
+            ebx = self._run_asm(
+                b"\x66\xB8\x07\x00" # mov eax,0x7"
+                b"\x0f\xa2"         # cpuid
+                b"\x89\xD8"         # mov ax,bx
+                b"\xC3"             # ret
+            )
+            print( f'Checking Extended features level 7: ebx = {ebx}')
+            
+            extended_flags.update( {
+                'bmi1':         	is_bit_set(ebx, 3),
+                'hle':				is_bit_set(ebx, 4),
+                'avx2':         	is_bit_set(ebx, 5),
+                'avx512f':      	is_bit_set(ebx, 16), # foundation
+                'avx512dq':     	is_bit_set(ebx, 17), # double-quad word
+                'rdseed':       	is_bit_set(ebx, 18),
+                'avx512ifma':   	is_bit_set(ebx, 21), # integer fused multiply-add
+                'avx512pf':     	is_bit_set(ebx, 26), # pre-fetch
+                'avx512er':     	is_bit_set(ebx, 27), # exponential and reciprocal
+                'avx512cd':     	is_bit_set(ebx, 28), # conflict detection
+                'sha':          	is_bit_set(ebx, 29), 
+                'avx512bw':     	is_bit_set(ebx, 30), # byte and word 
+                'avx512vl':    	 	is_bit_set(ebx, 31), # vector-length
+                # 'avx512vbmi':  		is_bit_set(ecx, 1),  # vector bit manipulation
+                # 'avx512_4vnniw':	is_bit_set(edx, 2),  # neural-network
+                # 'avx512_4fmaps':	is_bit_set(edx, 3),  # multiply-accumulate float-32
+            })
         # Get a list of only the flags that are true
         extended_flags = [k for k, v in extended_flags.items() if v]
-        flags.update( extended_flags )
+        flags.extend( extended_flags )
 
         flags.sort()
         return flags
@@ -1354,6 +1361,7 @@ def get_cpu_info_from_registry():
         scale, hz_advertised = _get_hz_string_from_brand(processor_brand)
 
         # Get the CPU features
+        
         feature_bits = DataSource.winreg_feature_bits()
 
         def is_set(bit):
@@ -1361,9 +1369,7 @@ def get_cpu_info_from_registry():
             retval = mask & feature_bits > 0
             return retval
 
-        # http://en.wikipedia.org/wiki/CPUID
-        # http://unix.stackexchange.com/questions/43539/what-do-the-flags-in-proc-cpuinfo-mean
-        # http://www.lohninger.com/helpcsuite/public_constants_cpuid.htm
+        # https://msdn.microsoft.com/en-us/library/windows/desktop/ms724482(v=vs.85).aspx
         flags = {
             'fpu' : is_set(0), # Floating Point Unit
             'vme' : is_set(1), # V86 Mode Extensions
@@ -1553,7 +1559,13 @@ def main():
         sys.stderr.write(str(err) + "\n")
         sys.exit(1)
 
+    # cpuid = CPUID()
+    # max_support = cpuid.get_max_extension_support()
+    # print( f'Max extension: {max_support}' )
+    # print( f'Flags: {cpuid.get_flags(max_support)}' )
+
     info = get_cpu_info()
+    
     if info:
         print('Vendor ID: {0}'.format(info.get('vendor_id', '')))
         print('Hardware Raw: {0}'.format(info.get('hardware', '')))
@@ -1586,5 +1598,7 @@ def main():
 
 if __name__ == '__main__':
     main()
-else:
-    _check_arch()
+# else:
+#     _check_arch()
+
+    

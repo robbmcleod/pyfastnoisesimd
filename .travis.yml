@@ -1,0 +1,35 @@
+sudo: false
+
+language: python
+
+python:
+  - 3.4
+  - 3.5
+  - 3.6
+
+before_install:
+  - uname -a
+  - free -m
+  - df -h
+  - ulimit -a
+  - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-5.4; fi
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-5.4" CC="gcc-5.4"; fi
+# Force use of modern pip and setuptools
+  - pip install --upgrade pip
+  - pip install --upgrade setuptools
+  - pip install -r requirements.txt --verbose
+  - python -V
+
+
+install:
+  - pip install . --verbose
+
+script:
+  - mkdir empty
+  - cd empty
+  - python -c "import sys; import pyfastnoisesimd; sys.exit(0 if pyfastnoisesimd.test().wasSuccessful() else 1)"
+
+notifications:
+  email: false
+
+

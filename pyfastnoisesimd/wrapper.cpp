@@ -96,19 +96,22 @@ PyFNS_GetEmptySet(PyObject *self, PyObject *args)
     const char *format = "i|ii";
     float *data;
 
-    if (!PyArg_ParseTuple(args, format, &dims[0], &dims[1], &dims[2]))
-    {
+    if (!PyArg_ParseTuple(args, format, &dims[0], &dims[1], &dims[2])) {
         return NULL;
     }
 
-    if ((dims[1] > 0) && (dims[2] > 0))
-    { // 3D
+    if ((dims[1] > 0) && (dims[2] > 0)) { // 3D
+        // Py_BEGIN_ALLOW_THREADS // Release GIL
         data = FastNoiseSIMD::GetEmptySet((int)dims[0], (int)dims[1], (int)dims[2]);
+        // Py_END_ALLOW_THREADS
         return PyArray_SimpleNewFromData(3, dims, NPY_FLOAT32, data);
     }
-    // Single argument, make a 1D array
-    data = FastNoiseSIMD::GetEmptySet((int)dims[0]);
-    return PyArray_SimpleNewFromData(1, dims, NPY_FLOAT32, data);
+    else { // Single argument, make a 1D array
+        // Py_BEGIN_ALLOW_THREADS // Release GIL
+        data = FastNoiseSIMD::GetEmptySet((int)dims[0]);
+        // Py_END_ALLOW_THREADS
+        return PyArray_SimpleNewFromData(1, dims, NPY_FLOAT32, data);
+    }
 }
 
 PyDoc_STRVAR(AlignedSize__doc__,
@@ -124,6 +127,14 @@ PyFNS_AlignedSize(PyObject *self, PyObject *args)
         return NULL;
     }
     return Py_BuildValue("i", FastNoiseSIMD::AlignedSize(size));
+}
+
+PyDoc_STRVAR(GetSIMDLevel__doc__,
+             "int GetSIMDLevel() -- Returns maximum SIMD level supported found.\n");
+static PyObject *
+PyFNS_GetSIMDLevel(FNSObject *self, PyObject *args)
+{
+    return Py_BuildValue("i", self->fns->GetSIMDLevel());
 }
 
 PyDoc_STRVAR(GetSeed__doc__,
@@ -187,10 +198,10 @@ PyFNS_SetNoiseType(FNSObject *self, PyObject *args)
 }
 
 // Sets scaling factor for individual axis
-PyDoc_STRVAR(SetAxisScales__doc__,
-             "SetAxisScales(float zScale, float yScale, float xScale) --  Sets scaling factor for individual axis. Defaults: 1.0. \n");
+PyDoc_STRVAR(SetAxesScales__doc__,
+             "SetAxesScales(float zScale, float yScale, float xScale) --  Sets scaling factor for individual axis. Defaults: 1.0. \n");
 static PyObject *
-PyFNS_SetAxisScales(FNSObject *self, PyObject *args)
+PyFNS_SetAxesScales(FNSObject *self, PyObject *args)
 {
     float xScale, yScale, zScale;
     const char *format = "fff";
@@ -199,7 +210,7 @@ PyFNS_SetAxisScales(FNSObject *self, PyObject *args)
     {
         return NULL;
     }
-    self->fns->SetAxisScales(zScale, yScale, xScale);
+    self->fns->SetAxesScales(zScale, yScale, xScale);
     Py_RETURN_NONE;
 }
 
@@ -352,11 +363,11 @@ PyFNS_SetCellularNoiseLookupFrequency(FNSObject *self, PyObject *args)
 }
 
 // Sets the 2 distance indicies used for distance2 return types
-PyDoc_STRVAR(SetCellularDistance2Indicies__doc__,
-             "SetCellularDistance2Indicies(int cellularDistanceIndex0, int cellularDistanceIndex1) -- Sets the 2 distance indicies \
+PyDoc_STRVAR(SetCellularDistance2Indices__doc__,
+             "SetCellularDistance2Indices(int cellularDistanceIndex0, int cellularDistanceIndex1) -- Sets the 2 distance indicies \
 used for distance2 return types. Default: 0, 1. Note: index0 should be lower than index1, index1 must be < 4.\n");
 static PyObject *
-PyFNS_SetCellularDistance2Indicies(FNSObject *self, PyObject *args)
+PyFNS_SetCellularDistance2Indices(FNSObject *self, PyObject *args)
 {
     int index1, index2;
     const char *format = "ii";
@@ -534,8 +545,8 @@ PyFNS_GetNoiseSet(FNSObject *self, PyObject *args)
     {
         return NULL;
     }
-    // Release GIL
-    Py_BEGIN_ALLOW_THREADS
+
+    Py_BEGIN_ALLOW_THREADS // Release GIL
     data = self->fns->GetNoiseSet( zStart, yStart, xStart, (int)dims[0], (int)dims[1], (int)dims[2], scaleMod );
     Py_END_ALLOW_THREADS
     
@@ -551,46 +562,64 @@ static PyObject *
 PyFNS_FillNoiseSet(FNSObject *self, PyObject *args)
 {
     // Fill an existing empty array, used for multi-threaded operation
-    npy_intp numpyArrayPtr;
+    // PyObject* noiseObj;
+    float* noisePtr;
     int xStart, yStart, zStart;
-    npy_intp dims[3] = {0, 0, 0};
+    int dims[3] = {0, 0, 0};
     float scaleMod = 1.0;
     const char *format = "Liiiiii|f";
-    float *data = NULL;
 
-    if (!PyArg_ParseTuple(args, format, &numpyArrayPtr, &zStart, &yStart, &xStart, &dims[0], &dims[1], &dims[2], &scaleMod))
+    if (!PyArg_ParseTuple(args, format, &noisePtr, &zStart, &yStart, &xStart, &dims[0], &dims[1], &dims[2], &scaleMod))
     {
         return NULL;
     }
+    // noisePtr = (float *)PyArray_GETPTR3((PyArrayObject *)noiseObj, 0, 0, 0);
+
     
-    // Release GIL
-    Py_BEGIN_ALLOW_THREADS
-    data = (float *)numpyArrayPtr;
-    self->fns->FillNoiseSet( data, zStart, yStart, xStart, (int)dims[0], (int)dims[1], (int)dims[2], scaleMod );
+    Py_BEGIN_ALLOW_THREADS // Release GIL
+    self->fns->FillNoiseSet( noisePtr, zStart, yStart, xStart, dims[0], dims[1], dims[2], scaleMod );
     Py_END_ALLOW_THREADS
 
     Py_RETURN_NONE;
 }
 
+PyDoc_STRVAR(NoiseFromCoords__doc__,
+    "NoiseFromCoords(numpy.ndarray noise, numpy.ndarray coords)\
+-- Fill a noise set from arbitrary coordinates. Must be a shape (3,N) array of dtype 'float32'. \n");
+static PyObject *
+PyFNS_NoiseFromCoords(FNSObject *self, PyObject *args)
+{
+    FastNoiseVectorSet vector;
+    int size, offset;
+    float *noisePtr, *xPtr, *yPtr, *zPtr;
 
-// float* GetSampledNoiseSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, int sampleScale);
-// float* GetWhiteNoiseSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
-// float* GetValueSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
-// float* GetValueFractalSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
-// float* GetPerlinSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
-// float* GetPerlinFractalSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
-// float* GetSimplexSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
-// float* GetSimplexFractalSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
-// float* GetCellularSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
-// float* GetCubicSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
-// float* GetCubicFractalSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
+    if (!PyArg_ParseTuple(args, "LLLLii", &noisePtr, &zPtr, &yPtr, &xPtr, &size, &offset))
+    {
+        return NULL;
+    }
+
+    Py_BEGIN_ALLOW_THREADS // Release GIL
+    vector.size = size;
+
+    // Typical thing here, Numpy is [Z,Y,X], whereas PyFastNoiseSIMD is [X,Y,Z]
+    // but it makes no difference in the result, as long as we obey C-ordering
+    vector.xSet = &zPtr[offset];
+    vector.ySet = &yPtr[offset];
+    vector.zSet = &xPtr[offset];
+
+    self->fns->FillNoiseSet(&noisePtr[offset], &vector, 0.0f, 0.0f, 0.0f);
+    Py_END_ALLOW_THREADS
+
+    Py_RETURN_NONE;
+}
 
 static PyMethodDef FNS_methods[] = {
+    {"GetSIMDLevel", (PyCFunction)PyFNS_GetSIMDLevel, METH_VARARGS, GetSeed__doc__},
     {"GetSeed", (PyCFunction)PyFNS_GetSeed, METH_VARARGS, GetSeed__doc__},
     {"SetSeed", (PyCFunction)PyFNS_SetSeed, METH_VARARGS, SetSeed__doc__},
     {"SetFrequency", (PyCFunction)PyFNS_SetFrequency, METH_VARARGS, SetFrequency__doc__},
     {"SetNoiseType", (PyCFunction)PyFNS_SetNoiseType, METH_VARARGS, SetNoiseType__doc__},
-    {"SetAxisScales", (PyCFunction)PyFNS_SetAxisScales, METH_VARARGS, SetAxisScales__doc__},
+    {"SetAxesScales", (PyCFunction)PyFNS_SetAxesScales, METH_VARARGS, SetAxesScales__doc__},
     {"SetFractalOctaves", (PyCFunction)PyFNS_SetFractalOctaves, METH_VARARGS, SetFractalOctaves__doc__},
     {"SetFractalLacunarity", (PyCFunction)PyFNS_SetFractalLacunarity, METH_VARARGS, SetFractalLacunarity__doc__},
     {"SetFractalGain", (PyCFunction)PyFNS_SetFractalGain, METH_VARARGS, SetFractalGain__doc__},
@@ -599,7 +628,7 @@ static PyMethodDef FNS_methods[] = {
     {"SetCellularDistanceFunction", (PyCFunction)PyFNS_SetCellularDistanceFunction, METH_VARARGS, SetCellularDistanceFunction__doc__},
     {"SetCellularNoiseLookupType", (PyCFunction)PyFNS_SetCellularNoiseLookupType, METH_VARARGS, SetCellularNoiseLookupType__doc__},
     {"SetCellularNoiseLookupFrequency", (PyCFunction)PyFNS_SetCellularNoiseLookupFrequency, METH_VARARGS, SetCellularNoiseLookupFrequency__doc__},
-    {"SetCellularDistance2Indicies", (PyCFunction)PyFNS_SetCellularDistance2Indicies, METH_VARARGS, SetCellularDistance2Indicies__doc__},
+    {"SetCellularDistance2Indices", (PyCFunction)PyFNS_SetCellularDistance2Indices, METH_VARARGS, SetCellularDistance2Indices__doc__},
     {"SetCellularJitter", (PyCFunction)PyFNS_SetCellularJitter, METH_VARARGS, SetCellularJitter__doc__},
     {"SetPerturbType", (PyCFunction)PyFNS_SetPerturbType, METH_VARARGS, SetPerturbType__doc__},
     {"SetPerturbAmp", (PyCFunction)PyFNS_SetPerturbAmp, METH_VARARGS, SetPerturbAmp__doc__},
@@ -610,16 +639,10 @@ static PyMethodDef FNS_methods[] = {
     {"SetPerturbNormaliseLength", (PyCFunction)PyFNS_SetPerturbNormaliseLength, METH_VARARGS, SetPerturbNormaliseLength__doc__},
     {"GetNoiseSet", (PyCFunction)PyFNS_GetNoiseSet, METH_VARARGS, GetNoiseSet__doc__},
     {"FillNoiseSet", (PyCFunction)PyFNS_FillNoiseSet, METH_VARARGS, FillNoiseSet__doc__},
+    {"NoiseFromCoords", (PyCFunction)PyFNS_NoiseFromCoords, METH_VARARGS, NoiseFromCoords__doc__},
     {NULL, NULL, 0, NULL},
 };
 
-
-// static PyMemberDef FNS_members[] = {
-//   // registers and program should be private because they aren't PyObjects.
-//   { CHARP("cobj"), T_OBJECT_EX, offsetof(FNSObject, fns), READONLY, NULL},
-//   //{ CHARP("program"), T_OBJECT_EX, offsetof(NumExprObject, program), READONLY, NULL},
-//   {NULL},
-// };
 
 PyTypeObject FNSType = {
     PyVarObject_HEAD_INIT(NULL, 0) "pyfastnoisesimd.extension.FNS", /*tp_name*/
@@ -680,8 +703,6 @@ static struct PyModuleDef module_def = {
     NULL,
     NULL,
     NULL};
-
-// PyObject* PyInit_interpreter(void)
 
 PyMODINIT_FUNC
 PyInit_extension(void)
