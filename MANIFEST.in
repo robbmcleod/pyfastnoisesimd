@@ -1,5 +1,5 @@
 include README.rst
 include LICENSE
-requirements.txt
+include requirements.txt
 recursive-include . *.cpp
 recursive-include . *.h
