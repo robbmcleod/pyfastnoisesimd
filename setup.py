@@ -28,7 +28,7 @@ from numpy import get_include
 # pyfastnoisesimd version
 major_ver = 0
 minor_ver = 2
-nano_ver = 0
+nano_ver = 1
 
 branch = ''
 
@@ -157,7 +157,6 @@ Intended Audience :: Developers
 Intended Audience :: Information Technology
 License :: OSI Approved :: BSD License
 Programming Language :: Python
-Programming Language :: Python :: 3.4
 Programming Language :: Python :: 3.5
 Programming Language :: Python :: 3.6
 Topic :: Software Development :: Libraries :: Python Modules

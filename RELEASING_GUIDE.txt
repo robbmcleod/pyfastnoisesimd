@@ -1,0 +1,37 @@
+The following is a guide for making a release on PyPI.
+
+Preliminaries
+-------------
+
+* Ensure that `README.rst` has up-to-date release notes.
+
+* Ensure that there are no branches in the version in `setup.py`.
+
+* Check the test results from Appveyor and TravisCI.
+
+* Push any latest changes.
+
+Release
+-------
+
+* Create a new tag for the given version
+
+    git tag -a vX.Y.Z -m "Tagging version X.Y.Z"
+
+* Push the tag to Github:
+
+    git push
+    git push --tags
+
+Package and upload
+------------------
+
+Build a source distribution and a wheel for Windows and the latest Python version
+as:
+
+    python setup.py sdist bdist_wheel upload -r pypi
+
+Finally
+-------
+
+* Increment the version enumerator in `setup.py`

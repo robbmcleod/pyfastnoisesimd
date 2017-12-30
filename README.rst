@@ -81,6 +81,12 @@ Not implemented at present
 Release Notes
 -------------
 
+**0.2.1**
+
+* Drop explicit Python 3.4 support as we cannot test it for Windows on MSVC2010
+  and in any case it wouldn't have AVX2 instruction support.
+* Start tagging, see `RELEASING_GUIDE.txt` for notes.
+
 **0.2.0**
 
 * Added the capability to provide coordinates 
