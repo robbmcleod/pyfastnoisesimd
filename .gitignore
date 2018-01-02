@@ -11,6 +11,8 @@ build
 dist
 *.egg-info
 __pycache__
+pyfastnoisesimd/version.py
+pyfastnoisesimd/fastnoisesimd/amd64_arch.h
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
