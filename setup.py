@@ -34,10 +34,6 @@ VERSION = "%d.%d.%d%s" % (major_ver, minor_ver, nano_ver, branch)
 # Create the version.py file
 open('pyfastnoisesimd/version.py', 'w').write('__version__ = "%s"\n' % VERSION)
 
-# Global variables
-CFLAGS = os.environ.get('CFLAGS', '').split()
-LFLAGS = os.environ.get('LFLAGS', '').split()
-
 # Sources and headers
 sources = [
     'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD.cpp',
@@ -52,6 +48,7 @@ with open('README.rst') as fh:
     long_desc = fh.read()
 
 if os.name == 'nt':
+    extra_cflags = []
     avx512 = {
         'sources': [
             'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_avx512.cpp'
@@ -85,7 +82,7 @@ if os.name == 'nt':
         ],
     }
 else:  # Linux
-    CFLAGS += ['-std=c++11']
+    extra_cflags = ['-std=c++11']
     avx512 = {
         'sources': [
             'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_avx512.cpp'
@@ -163,8 +160,7 @@ setup(name = "pyfastnoisesimd",
                    sources=sources,
                    library_dirs=lib_dirs,
                    libraries=libs,
-                   extra_link_args=LFLAGS,
-                   extra_compile_args=CFLAGS ),
+                   extra_compile_args=extra_cflags),
         ],
       # tests_require=tests_require,
       packages = ['pyfastnoisesimd'],
