@@ -614,7 +614,7 @@ PyFNS_NoiseFromCoords(FNSObject *self, PyObject *args)
 }
 
 static PyMethodDef FNS_methods[] = {
-    {"GetSIMDLevel", (PyCFunction)PyFNS_GetSIMDLevel, METH_VARARGS, GetSeed__doc__},
+    {"GetSIMDLevel", (PyCFunction)PyFNS_GetSIMDLevel, METH_VARARGS, GetSIMDLevel__doc__},
     {"GetSeed", (PyCFunction)PyFNS_GetSeed, METH_VARARGS, GetSeed__doc__},
     {"SetSeed", (PyCFunction)PyFNS_SetSeed, METH_VARARGS, SetSeed__doc__},
     {"SetFrequency", (PyCFunction)PyFNS_SetFrequency, METH_VARARGS, SetFrequency__doc__},
