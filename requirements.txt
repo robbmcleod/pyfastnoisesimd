@@ -1,2 +1,2 @@
 numpy > 1.7
-setuptools
+setuptools >= 34.1.0
