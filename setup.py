@@ -37,6 +37,7 @@ open('pyfastnoisesimd/version.py', 'w').write('__version__ = "%s"\n' % VERSION)
 # Sources and headers
 sources = [
     'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD.cpp',
+    'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_neon.cpp',
     'pyfastnoisesimd/wrapper.cpp'
 ]
 inc_dirs = [get_include(), 'pyfastnoisesimd', 'pyfastnoisesimd/fastnoisesimd/']
