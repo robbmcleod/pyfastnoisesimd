@@ -541,7 +541,8 @@ void FastNoiseSIMD::SetCellularDistance2Indicies(int cellularDistanceIndex0, int
 void FastNoiseVectorSet::Free()
 {
 	size = -1;
-	FastNoiseSIMD::FreeNoiseSet(xSet);
+	// RAM: disabled free() call as this is Python-managed memory in `pyfastnoisesimd`
+	// FastNoiseSIMD::FreeNoiseSet(xSet);
 	xSet = nullptr;
 	ySet = nullptr;
 	zSet = nullptr;

@@ -81,6 +81,13 @@ Not implemented at present
 Release Notes
 -------------
 
+**0.2.2**
+
+* Corrected spelling error `PeturbType.NoPertrub` -> `PeturbType.NoPerturb`
+* Stopped `fastnoisesimd` from freeing memory for `coords` argument of 
+  `Noise.genFromCoords(coords)`.  It should now be possible to reuse 
+  coords without seg-faulting.
+
 **0.2.1**
 
 * Drop explicit Python 3.4 support as we cannot test it for Windows on MSVC2010

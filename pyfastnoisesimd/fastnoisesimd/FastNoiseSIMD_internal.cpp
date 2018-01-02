@@ -2409,7 +2409,7 @@ void SIMD_LEVEL_CLASS::FillSampledNoiseSet(float* noiseSet, FastNoiseVectorSet* 
 	}
 
 	FreeNoiseSet(noiseSetSample);
-	SIMD_ZERO_ALL();
+	SIMD_ZERO_ALL(); // RAM: this does nothing at present
 }
 
 #undef SIMD_LEVEL

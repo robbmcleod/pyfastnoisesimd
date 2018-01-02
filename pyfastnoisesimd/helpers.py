@@ -32,7 +32,7 @@ class PerturbType(Enum):
     ''' The enumerator for the class of Perturbation.
     Valid enums: NoPeturb, Gradient, GradientFractal, Normalise, Gradient_Normalise, 
     GradientFractal_Normalise'''
-    NoPertrub                 = 0
+    NoPerturb                 = 0
     Gradient                  = 1
     GradientFractal           = 2
     Normalise                 = 3
@@ -267,7 +267,7 @@ class PerturbClass(object):
     def __init__(self, fns):
         self._fns = fns
 
-        self._perturbType = PerturbType.NoPertrub
+        self._perturbType = PerturbType.NoPerturb
         self._amp = 1.0
         self._frequency = 0.5
         self._octaves = 3
