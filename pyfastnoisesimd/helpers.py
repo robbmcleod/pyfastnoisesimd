@@ -6,9 +6,10 @@ from pyfastnoisesimd.cpuinfo import get_cpu_info
 cpu_info = get_cpu_info()
 
 class NoiseType(Enum):
-    ''' The high-level class of noise generated.
-    Valid enums: Value, ValueFractal, Perlin, PerlinFractal, Simplex, 
-    SimplexFractal, WhiteNoise, Cellular, Cubic, CubicFractal
+    '''
+    The class of noise generated.
+
+    Enums: ``{Value, ValueFractal, Perlin, PerlinFractal, Simplex, SimplexFractal, WhiteNoise, Cellular, Cubic, CubicFractal}``
     '''
     Value          = 0
     ValueFractal   = 1
@@ -22,16 +23,20 @@ class NoiseType(Enum):
     CubicFractal   = 9
 
 class FractalType(Enum):
-    '''Fractal noise types also have an additional fractal type. 
-    Valid enums: FBM, Billow, RigidMulti'''
+    '''
+    Enum: Fractal noise types also have an additional fractal type. 
+
+    Values: ``{FBM, Billow, RigidMulti}``'''
     FBM            = 0
     Billow         = 1
     RigidMulti     = 2
 
 class PerturbType(Enum):
-    ''' The enumerator for the class of Perturbation.
-    Valid enums: NoPeturb, Gradient, GradientFractal, Normalise, Gradient_Normalise, 
-    GradientFractal_Normalise'''
+    '''
+    Enum: The enumerator for the class of Perturbation.
+
+    Values: ``{NoPeturb, Gradient, GradientFractal, Normalise, Gradient_Normalise, GradientFractal_Normalise}``
+    '''
     NoPerturb                 = 0
     Gradient                  = 1
     GradientFractal           = 2
@@ -40,17 +45,21 @@ class PerturbType(Enum):
     GradientFractal_Normalise = 5
 
 class CellularDistanceFunction(Enum):
-    '''The distance function for cellular noise.
-    Valid enums: Euclidean, Manhattan, Natural'''
+    '''
+    Enum: The distance function for cellular noise.
+
+    Values: ``{Euclidean, Manhattan, Natural}``'''
     Euclidean = 0
     Manhattan = 1
     Natural   = 2
 
 class CellularReturnType(Enum):
-    ''' The functional filter to apply to the distance function to generate the 
+    '''
+    Enum: The functional filter to apply to the distance function to generate the 
     return from cellular noise.
-    Valid enums: CellValue, Distance, Distance2, Distance2Add, Distance2Sub, 
-    Distance2Mul, Distance2Div, NoiseLookup, Distance2Cave'''
+
+    Values: ``{CellValue, Distance, Distance2, Distance2Add, Distance2Sub, Distance2Mul, Distance2Div, NoiseLookup, Distance2Cave}``
+    '''
     CellValue     = 0
     Distance      = 1
     Distance2     = 2
@@ -61,22 +70,27 @@ class CellularReturnType(Enum):
     NoiseLookup   = 7
     Distance2Cave = 8
 
-def emptyCoords(size):
+def emptyCoords(size: int) -> np.ndarray:
     '''
-    Generate an empty array of length `size` coordinates in [Z,Y,X], for use in 
-    `Noise.genFromCoords()`.  
-
-    The returned array will be of shape (3, size), however `size` may be somewhat
-    larger to accommodate an integer number of SIMD instructions along its axis.
+    Generate an empty array of suitable for use with ``Noise.genFromCoords()``.
+    
+    Args:
+        size: length of coordinates for use in `Noise.genFromCoords()`.  
+    Returns:
+        A correctly aligned ``numpy.ndarray`` of shape ``(3,size)``.  May be 
+        longer than ``size`` to accommodate an integer number of SIMD 
+        instructions along its axis.
     '''
     size = ext.AlignedSize(int(size))
     empty = ext.EmptySet(size*3).reshape((3,size))
     return empty
 
 class FractalClass(object):
-    ''' Holds properties related to `NoiseType.<...>Fractal`. 
+    ''' 
+    Holds properties related to noise types that include fractal octaves.
 
-    Do not instantiate this class separately from `Noise`.'''
+    Do not instantiate this class separately from `Noise`.
+    '''
     def __init__(self, fns):
         self._fns = fns
         self._octaves = 3
@@ -85,9 +99,11 @@ class FractalClass(object):
         self._fractalType = FractalType.FBM
 
     @property
-    def fractalType(self):
-        ''' The type of fractal for fractal NoiseTypes.
-        Type: pyfastnoisesimd.FractalType, default: `FractalType.FBM`'''
+    def fractalType(self) -> FractalType:
+        '''
+        The type of fractal for fractal NoiseTypes.
+
+        Default: ``FractalType.FBM``'''
         return self._fractalType
 
     @fractalType.setter
@@ -105,9 +121,15 @@ class FractalClass(object):
         self._fns.SetFractalType(new.value)
         
     @property
-    def octaves(self):
-        '''Octave count for all fractal noise types.
-	    type: `int`, default: 3'''
+    def octaves(self) -> int:
+        '''
+        Octave count for all fractal noise types, i.e. the number of 
+        log-scaled frequency levels of noise to apply. Generally ``3`` is 
+        sufficient for small textures/sprites (256x256 pixels), use larger 
+        values for larger textures/sprites.
+
+	    Default: ``3``
+        '''
         return self._octaves
 
     @octaves.setter
@@ -116,9 +138,12 @@ class FractalClass(object):
         self._fns.SetFractalOctaves(int(new))
 
     @property
-    def lacunarity(self):
-        '''Octave lacunarity for all fractal noise types
-	    Type: `float`, default: 2.0'''
+    def lacunarity(self) -> float:
+        '''
+        Octave lacunarity for all fractal noise types.
+
+	    Default: ``2.0``
+        '''
         return self._lacunarity
 
     @lacunarity.setter
@@ -127,9 +152,14 @@ class FractalClass(object):
         self._fns.SetFractalLacunarity(float(new))
 
     @property
-    def gain(self):
-        '''Octave gain for all fractal noise types
-	    type: `float`, default: 0.5'''
+    def gain(self) -> float:
+        '''
+        Octave gain for all fractal noise types. Reflects the ratio 
+        of the underlying noise to that of the fractal.  Values > 0.5 up-weight 
+        the fractal.
+
+	    Default: ``0.5``
+        '''
         return self._gain
 
     @gain.setter
@@ -139,9 +169,11 @@ class FractalClass(object):
 
 
 class CellularClass(object):
-    ''' Holds properties related to `NoiseType.Cellular`. 
+    '''
+    Holds properties related to `NoiseType.Cellular`. 
 
-    Do not instantiate this class separately from `Noise`.'''
+    Do not instantiate this class separately from ``Noise``.
+    '''
     def __init__(self, fns):
         self._fns = fns
 
@@ -154,8 +186,11 @@ class CellularClass(object):
     
     @property
     def returnType(self):
-        ''' The return type for cellular (Voronoi) noise.
-        Type: pyfastnoisesimd.CellularReturnType, default: `CellularReturnType.Distance`'''
+        '''
+        The return type for cellular (cubic Voronoi) noise.
+
+        Default: ``CellularReturnType.Distance``
+        '''
         return self._returnType
 
     @returnType.setter
@@ -178,8 +213,11 @@ class CellularClass(object):
 
     @distanceFunc.setter
     def distanceFunc(self, new):
-        ''' The distance function for cellular (Voronoi) noise.
-        Type: pyfastnoisesimd.CellularDistanceFunction, default: `CellularDistanceFunction.Euclidean`'''
+        '''
+        The distance function for cellular (cubic Voronoi) noise.
+
+        Default: ``CellularDistanceFunction.Euclidean``
+        '''
         if isinstance(new, CellularDistanceFunction):
             pass
         elif isinstance(new, int):
@@ -193,9 +231,12 @@ class CellularClass(object):
         self._fns.SetCellularDistanceFunction(new.value)
 
     @property
-    def noiseLookupType(self):
-        '''  Sets the type of noise used if cellular return type is set as `CellularReturnType.NoiseLookup`.
-        Type: pyfastnoisesimd.NoiseType, default: `NoiseType.Simplex` '''
+    def noiseLookupType(self) -> NoiseType:
+        '''
+        Sets the type of noise used if cellular return type.
+        
+        Default: `NoiseType.Simplex`
+        '''
         return self._noiseLookupType
 
     @noiseLookupType.setter
@@ -213,8 +254,11 @@ class CellularClass(object):
 
     @property
     def lookupFrequency(self):
-        ''' Relative frequency on the cellular noise lookup return type.
-        Type: `float`, default: `0.2`'''
+        '''
+        Relative frequency on the cellular noise lookup return type.
+
+        Default: ``0.2``
+        '''
         return self._lookupFrequency
 
     @lookupFrequency.setter
@@ -224,9 +268,13 @@ class CellularClass(object):
 
     @property
     def jitter(self):
-        ''' The maximum distance a cellular point can move from it's grid 
-        position. Setting this high will make artifacts more common.
-	    Type: `float`, default: `0.45`'''
+        ''' 
+        The maximum distance a cellular point can move from it's grid 
+        position. The value is relative to the cubic cell spacing of ``1.0``. 
+        Setting ``jitter > 0.5`` can generate wrapping artifacts.
+
+	    Default: ``0.45``
+        '''
         return self._jitter
 
     @jitter.setter
@@ -235,11 +283,15 @@ class CellularClass(object):
         self._fns.SetCellularJitter(float(new))
 
     @property
-    def distanceIndices(self):
-        '''Sets the 2 distance indices used for distance2 return types
-	    Type: 2-element tuple/list of `int`, default: 0, 1
-	    Note: index0 should be lower than index1
-	    Both indices must be >= 0, index1 must be < 4'''
+    def distanceIndices(self) -> tuple:
+        '''
+        Sets the two distance indices used for ``distance2X`` return types
+	    Default: ``(0, 1)``
+
+	    .. note: * index0 should be lower than index1
+	             * Both indices must be ``>= 0``
+                 * index1 must be ``< 4``
+        '''
         return self._distanceIndices
 
     @distanceIndices.setter
@@ -260,9 +312,11 @@ class CellularClass(object):
         return self._fns.SetCellularDistance2Indices(*new)
 
 class PerturbClass(object):
-    ''' Holds properties related to the perturbation applied to noise.
+    '''
+    Holds properties related to the perturbation applied to noise.
 
-    Do not instantiate this class separately from `Noise`.'''
+    Do not instantiate this class separately from ``Noise``.
+    '''
 
     def __init__(self, fns):
         self._fns = fns
@@ -276,9 +330,12 @@ class PerturbClass(object):
         self._normaliseLength = 1.0
 
     @property
-    def perturbType(self):
-        ''' The class of perturbation. 
-        Type: pyfastnoisesimd.PerturbType, default: `PerturbType.NoPeturb`'''
+    def perturbType(self) -> PerturbType:
+        '''
+        The class of perturbation.
+
+        Default: ``PerturbType.NoPeturb``
+        '''
         return self._perturbType
 
     @perturbType.setter
@@ -295,9 +352,14 @@ class PerturbClass(object):
         return self._fns.SetPerturbType(new.value)
 
     @property
-    def amp(self):
-        ''' The maximum distance the input position can be perturbed.
-        Type: `float`, default: `1.0`'''
+    def amp(self) -> float:
+        '''
+        The maximum distance the input position can be perturbed. The 
+        reasonable values of ``amp`` before artifacts are apparent increase with 
+        decreased ``frequency``. The default value of ``1.0`` is quite high.
+
+        Default: ``1.0``
+        '''
         return self._amp
 
     @amp.setter
@@ -306,9 +368,12 @@ class PerturbClass(object):
         return self._fns.SetPerturbAmp(float(new))
 
     @property
-    def frequency(self):
-        ''' The relative frequency for the perturbation gradient.
-        Type: `float`, default: `0.5`'''
+    def frequency(self) -> float:
+        '''
+        The relative frequency for the perturbation gradient. 
+
+        Default: ``0.5``
+        '''
         return self._frequency
 
     @frequency.setter
@@ -317,9 +382,15 @@ class PerturbClass(object):
         return self._fns.SetPerturbFrequency(float(new))
 
     @property
-    def octaves(self):
-        ''' The octave count for fractal perturbation types,
-        Type: `int`, default: `3` '''
+    def octaves(self) -> int:
+        '''
+        The octave count for fractal perturbation types, i.e. the number of 
+        log-scaled frequency levels of noise to apply. Generally ``3`` is 
+        sufficient for small textures/sprites (256x256 pixels), use larger values for 
+        larger textures/sprites.
+
+        Default: ``3``
+        '''
         return self._octaves
 
     @octaves.setter
@@ -328,9 +399,15 @@ class PerturbClass(object):
         return self._fns.SetPerturbFractalOctaves(int(new))
 
     @property
-    def lacunarity(self):
-        '''The octave lacunarity (gap-fill) for fractal perturbation types.
-        Type: `float`, default: `2.0`'''
+    def lacunarity(self) -> float:
+        '''
+        The octave lacunarity (gap-fill) for fractal perturbation types. 
+        Lacunarity increases the fineness of fractals.  The appearance of 
+        graininess in fractal noise occurs when lacunarity is too high for 
+        the given frequency.
+
+        Default: ``2.0``
+        '''
         return self._lacunarity
 
     @lacunarity.setter
@@ -339,9 +416,14 @@ class PerturbClass(object):
         return self._fns.SetPerturbFractalLacunarity(float(new))
 
     @property
-    def gain(self):
-        '''The octave gain for fractal perturbation types.
-        Type: `float`, default: `0.5`'''
+    def gain(self) -> float:
+        '''
+        The octave gain for fractal perturbation types. Reflects the ratio 
+        of the underlying noise to that of the fractal.  Values > 0.5 up-weight 
+        the fractal.
+
+        Default: ``0.5``
+        '''
         return self._gain
 
     @gain.setter
@@ -350,10 +432,11 @@ class PerturbClass(object):
         return self._fns.SetPerturbFractalGain(float(new))
 
     @property
-    def normaliseLength(self):
+    def normaliseLength(self) -> float:
         '''
         The length for vectors after perturb normalising 
-        Type: `float`, default: `1.0`
+
+        Default: ``1.0``
         '''
         return self._normaliseLength
 
@@ -364,7 +447,7 @@ class PerturbClass(object):
 
 def _chunk_noise_grid(fns, chunk, chunkStart, chunkAxis):
     '''
-    For use by `concurrent.futures` to multi-thread `Noise.genAsGrid()` calls.
+    For use by ``concurrent.futures`` to multi-thread ``Noise.genAsGrid()`` calls.
     '''
     dataPtr = chunk.__array_interface__['data'][0]
     # print( 'pointer: {}, start: {}, axis{}'.format(chunk, chunkStart, chunkAxis) )
@@ -376,14 +459,20 @@ def _chunk_noise_grid(fns, chunk, chunkStart, chunkAxis):
         fns.FillNoiseSet(dataPtr, 0, 0, chunkStart, *chunk.shape)
 
 class Noise(object):
+    '''
+    ``Noise`` encapsulates the C++ SIMD class ``FNSObject`` and enables get/set 
+    of all relative properties via Python properties.  
 
-    def __init__(self, seed=None, numWorkers=None):
-        '''
-        If `seed == None` a random integer is generated as the seed.
+    Args:
+        seed: The random number (int32) that seeds the random-number generator
+            If ``seed == None`` a random integer is generated as the seed.
+        numWorkers: The number of threads used for parallel noise generation. 
+            If ``numWorkers == None`` the number of virtual cores found by 
+            ``cpuinfo.py`` is used.
+    '''
 
-        If `numWorkers == None` the number of virtual cores found by `cpuinfo.py` 
-        is used.
-        '''
+    def __init__(self, seed: int=None, numWorkers: int=None):
+
         self._fns = ext.FNS()
         if bool(numWorkers):
             self._asyncExecutor = cf.ThreadPoolExecutor(max_workers = numWorkers)
@@ -407,14 +496,19 @@ class Noise(object):
         self._axesScales = (1.0, 1.0, 1.0)
         
     @property
-    def numWorkers(self):
+    def numWorkers(self) -> int:
+        '''
+        Sets the maximum number of thread workers that will be used for 
+        generating noise. Generally should be the number of physical CPU cores 
+        on the machine. 
+        
+        Default: Number of virtual cores on machine.
+        '''
         return self._asyncExecutor._max_workers
 
     @numWorkers.setter
-    def numWorkers(self, N_workers):
-        ''' Sets the maximum number of thread workers that will be used for 
-        generating noise. Generally should be the number of physical CPU cores 
-        on the machine. '''
+    def numWorkers(self, N_workers) -> int:
+        
         N_workers = int(N_workers)
         if N_workers <= 0:
             raise ValueError('numWorkers must be greater than 0')
@@ -424,9 +518,11 @@ class Noise(object):
         self._asyncExecutor = cf.ThreadPoolExecutor(max_workers = N_workers)
 
     @property
-    def SIMDLevel(self):
-        ''' A text string identifying the SIMD level `FastNoiseSIMD` was 
-        compiled with. '''
+    def SIMDLevel(self) -> str:
+        '''
+        A text string identifying the SIMD level ``FastNoiseSIMD`` was 
+        compiled with.
+        '''
         levels = {
             5: 'ARM NEON',
             4: 'AVX512',
@@ -438,10 +534,11 @@ class Noise(object):
         return levels[self._fns.GetSIMDLevel()]
 
     @property 
-    def seed(self):
+    def seed(self) -> int:
         '''
         The random-number seed used for generation of noise. 
-        Type: `np.int32`, default: `numpy.random.randint()`
+
+        Default: ``numpy.random.randint()``
         '''
         return self._fns.GetSeed()
 
@@ -450,9 +547,12 @@ class Noise(object):
         return self._fns.SetSeed(int(np.int32(new)))
 
     @property
-    def frequency(self):
-        ''' The frequency of the noise, lower values result in larger noise features.
-        Type: `float`, default: `0.01`'''
+    def frequency(self) -> float:
+        '''
+        The frequency of the noise, lower values result in larger noise features.
+
+        Default: ``0.01``
+        '''
         return self._frequency
 
     @frequency.setter
@@ -461,9 +561,12 @@ class Noise(object):
         return self._fns.SetFrequency(float(new))
 
     @property
-    def noiseType(self):
-        ''' The class of noise. 
-        Type: pyfastnoisesimd.NoiseType, default: `NoiseType.Simplex` '''
+    def noiseType(self) -> NoiseType:
+        '''
+        The class of noise. 
+        
+        Default: ``NoiseType.Simplex`` 
+        '''
         return self._noiseType
 
     @noiseType.setter
@@ -480,29 +583,30 @@ class Noise(object):
         return self._fns.SetNoiseType(new.value)
 
     @property
-    def axesScales(self):
-        '''Sets the FastNoiseSIMD axes scales, which allows for non-square 
+    def axesScales(self) -> tuple:
+        '''
+        Sets the FastNoiseSIMD axes scales, which allows for non-square 
         voxels. Indirectly affects `frequency` by changing the voxel pitch.
-        Type: 3-element tuple of floats, e.g. (1.0, 1.0, 10.0).  '''
+
+        Default: ``(1.0, 1.0, 1.0)`` 
+        '''
         return self._axesScales
 
     @axesScales.setter
-    def axesScales(self, new):
+    def axesScales(self, new: tuple):
         if not hasattr(new, '__len__') or len(new) != 3:
             raise ValueError( 'axesScales must be a length 3 array/list/tuple' )
         
         self._axesScales = new
         return self._fns.SetAxesScales(*new)
 
-    def genAsGrid(self, shape=[1,1024,1024], start=[0,0,0]):
+    def genAsGrid(self, shape=[1,1024,1024], start=[0,0,0]) -> np.ndarray:
         '''
-        genAsGrid(self, shape=[1,1024,1024], start=[0,0,0])
-
         Generates noise according to the set properties along a rectilinear 
         (evenly-spaced) grid.  
 
-        * `shape`:  the shape of the output noise volume.
-        * `start`: the starting coordinates for generation of the grid.
+        * shape:  the shape of the output noise volume.
+        * start: the starting coordinates for generation of the grid.
           I.e. the coordinates are essentially `start: start + shape`
 
         Usage example::
@@ -542,12 +646,17 @@ class Noise(object):
             peon.result()
         return noise
 
-    def genFromCoords(self, coords):
+    def genFromCoords(self, coords: np.ndarray) -> np.ndarray:
         '''
-        genFromCoords(self, coords)
-
         Generate noise from supplied coordinates, rather than a rectilinear grid.
         Useful for complicated shapes, such as tesselated surfaces.
+
+        Args:
+            coords: 3-D coords as generated by ``fns.emptyCoords()`` 
+                and filled with relevant values by the user.
+            
+        Returns: 
+            noise: a shape (N,) array of the generated noise values.
 
         Usage example::
 
@@ -561,6 +670,13 @@ class Noise(object):
             coords[2,:] = np.zeros(numCoords)
             noise = fns.Noise()
             result = noise.genFromCoords(coords)
+
+        .. warning: ``coords`` Must be C-ordered, of shape (3,N) where N is evenly 
+                divisible by the SIMD instruction length (``N%SIMD_len == 0``).
+                It's recommended to use ``pyfastnoisesimd.emptyCoords(N)`` to 
+                generate this array. Alternatively use ``numpy.require()``. 
+                Failure to observe these restrictions can lead to segmentation 
+                faults.
 
         '''
 
@@ -639,12 +755,6 @@ class Noise(object):
         '''
 
 
-    
-
-
-
-
-
 #######################################################
 ######### DEPRECATED `kitchen-sink` interface #########
 #######################################################
@@ -653,9 +763,7 @@ _factory = ext.FNS()
 _factoryExecutor = cf.ThreadPoolExecutor( max_workers = 1 )
 def setNumWorkers( N_workers ):
     '''
-    setNumWorkers( N_workers )
-
-    ===DEPRECATED===
+    **DEPRECATED**
 
     Sets the maximum number of thread workers that will be used for generating
     noise.
@@ -679,17 +787,9 @@ def generate( size=[1,1024,1024], start=[0,0,0],
               perturbType=None, perturbAmp=1.0, perturbFreq=0.5, perturbOctaves=3,
               perturbLacunarity=2.0, perturbGain=0.5, perturbNormLen=1.0,   ):
     '''
-    def generate( size=[1,1024,1024], start=[0,0,0], 
-              seed=42, freq=0.01, noiseType='Simplex', axesScales=[1.0,1.0,1.0], 
-              fracType='FBM', fracOctaves=4, 
-              fracLacunarity=2.0, fractalGain=0.5, 
-              cellReturnType='Distance', cellDistFunc='Euclidean',
-              cellNoiseLookup='Simplex', cellNoiseLookupFreq='0.2', 
-              cellDist2Ind=[0,1], cellJitter=0.2,
-              perturbType=None, perturbAmp=1.0, perturbFreq=0.5, perturbOctaves=3,
-              perturbLacunarity=2.0, perturbGain=0.5, perturbNormLen=1.0,   )
+    **DEPRECATED**
 
-    ===DEPRECATED===
+    Generates noise using a factory.
     '''
     print( 'generate() is deprecated, please use Noise() class.' )
     _factory.SetSeed( seed )

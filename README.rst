@@ -36,7 +36,9 @@ More extensive examples are found in the ``examples`` folder on the Github repos
 Parallelism is further enhanced by the use of ``concurrent.futures`` to multi-thread
 the generation of noise for large arrays. Thread scaling is generally in the 
 range of 50-90 %, depending largely on the vectorized instruction set used. 
-The number of threads, defaults to the number of virtual cores on the system.
+The number of threads, defaults to the number of virtual cores on the system. The 
+ideal number of threads is typically the number of physical cores, irrespective 
+of Intel Hyperthreading®.
 
 
 Benchmarks
@@ -66,7 +68,7 @@ Computed 8388608 voxels Perlin noise in 0.013 s
     431.3 % thread scaling
 
 
-The alternative mode is ``Noise.getAsCoords()`` where the user provides the 
+The alternative mode is ``Noise.getFromCoords()`` where the user provides the 
 coordinates in Cartesian-space:
 
 Single-threaded mode
@@ -83,7 +85,10 @@ Release Notes
 
 **0.2.2**
 
-* Corrected spelling error `PeturbType.NoPertrub` -> `PeturbType.NoPerturb`
+* Added `orthographic_projection.py` to `examples/`.
+* Updated doc-strings to accommodate `sphinx.napoleon` formatting.
+* Added Sphinx-docs in the `doc` directory.
+* Corrected spelling error `PerturbType.NoPetrub` -> `PerturbType.NoPerturb`
 * Stopped `fastnoisesimd` from freeing memory for `coords` argument of 
   `Noise.genFromCoords(coords)`.  It should now be possible to reuse 
   coords without seg-faulting.
