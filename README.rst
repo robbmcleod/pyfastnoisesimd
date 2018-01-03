@@ -40,6 +40,12 @@ The number of threads, defaults to the number of virtual cores on the system. Th
 ideal number of threads is typically the number of physical cores, irrespective 
 of Intel Hyperthreading®.
 
+Documentation
+-------------
+
+Check it out at:
+
+http://pyfastnoisesimd.readthedocs.io
 
 Benchmarks
 ---------- 
