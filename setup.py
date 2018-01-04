@@ -206,6 +206,16 @@ class build(_build):
                 fh.write(b'#define FN_USE_FMA\n')
 
     def compiler_has_flags(self, compiler, name, flags):
+        if compiler.compiler_type == 'msvc':
+            # MSVC is special; it ignores and warns about unknown flags, but
+            # also flags unnecessary on an arch. Fortunately, we only need to
+            # know about a few versions used to compile Python.
+            # TODO: Update when some version of Python is compiled with VC2017.
+            if name == 'avx512' and sys.version_info <= (9999, ):
+                return False
+            else:
+                return True
+
         cwd = os.getcwd()
         with tempfile.TemporaryDirectory() as tmpdir:
             os.chdir(tmpdir)
