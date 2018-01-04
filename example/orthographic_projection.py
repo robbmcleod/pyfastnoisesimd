@@ -6,8 +6,7 @@ import matplotlib.pyplot as plt
 plt.style.use('dark_background')
 from mpl_toolkits.mplot3d import Axes3D
 
-N_thread = fns.cpu_info['count']
-N_thread = 1
+N_thread = fns.num_virtual_cores()
 
 def orthoProject(noise, tile2: int=512, p0: float=0., l0: float=0.) -> np.ndarray:
     '''
@@ -79,38 +78,40 @@ def orthoProject(noise, tile2: int=512, p0: float=0., l0: float=0.) -> np.ndarra
     print("    {:.1f} ns/pixel".format(1e9*(t2-t1)/maskLen) )
     return pmap
 
-if __name__ == '__main__':
-    # Let's set the view-parallel so we can see the top of the sphere
-    p0 = np.pi-0.3
-    # the view-meridian isn't so important, but if you wanted to rotate the 
-    # view, this is how you do it.
-    l0 = 0.0
 
-    # Now create a Noise object and populate it with intelligent values. How to 
-    # come up with 'intelligent' values is left as an exercise for the reader.
-    gasy = fns.Noise(numWorkers=N_thread)
-    gasy.frequency = 1.8
-    gasy.axesScales = (1.0,0.06,0.06)
+# Let's set the view-parallel so we can see the top of the sphere
+p0 = np.pi-0.3
+# the view-meridian isn't so important, but if you wanted to rotate the 
+# view, this is how you do it.
+l0 = 0.0
 
-    gasy.fractal.octaves = 5
-    gasy.fractal.lacunarity = 1.0
-    gasy.fractal.gain = 0.33
+# Now create a Noise object and populate it with intelligent values. How to 
+# come up with 'intelligent' values is left as an exercise for the reader.
+gasy = fns.Noise(numWorkers=N_thread)
+gasy.frequency = 1.8
+gasy.axesScales = (1.0,0.06,0.06)
 
-    gasy.perturb.perturbType = fns.PerturbType.GradientFractal
-    gasy.perturb.amp = 0.5
-    gasy.perturb.frequency = 1.2
-    gasy.perturb.octaves = 5
-    gasy.perturb.lacunarity = 2.5
-    gasy.perturb.gain = 0.5
+gasy.fractal.octaves = 5
+gasy.fractal.lacunarity = 1.0
+gasy.fractal.gain = 0.33
 
-    gasy_map = orthoProject(gasy, tile2=1024, p0=p0, l0=l0)
+gasy.perturb.perturbType = fns.PerturbType.GradientFractal
+gasy.perturb.amp = 0.5
+gasy.perturb.frequency = 1.2
+gasy.perturb.octaves = 5
+gasy.perturb.lacunarity = 2.5
+gasy.perturb.gain = 0.5
 
-    t3 = perf_counter()
-    # fig = plt.figure()
-    # fig.patch.set_facecolor('black')
-    # plt.imshow(gasy_map, cmap='inferno')
-    # # plt.savefig('gasy_map.png', bbox_inches='tight', dpi=200)
-    # plt.show(block=False)
-    t4 = perf_counter()
+gasy_map = orthoProject(gasy, tile2=1024, p0=p0, l0=l0)
 
-    print( "Matplotlib showed plot in {:.3e} s".format(t4-t3))
+t3 = perf_counter()
+fig = plt.figure()
+fig.patch.set_facecolor('black')
+plt.imshow(gasy_map, cmap='inferno')
+# plt.savefig('gasy_map.png', bbox_inches='tight', dpi=200)
+plt.show(block=False)
+t4 = perf_counter()
+print( "Matplotlib showed plot in {:.3e} s".format(t4-t3))
+
+plt.show(block=True)
+
