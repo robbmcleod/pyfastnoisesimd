@@ -7,6 +7,13 @@ accelerated with SIMD instruction sets. It may be installed via pip:
 
     pip install pyfastnoisesimd
     
+Parallelism is further enhanced by the use of ``concurrent.futures`` to multi-thread
+the generation of noise for large arrays. Thread scaling is generally in the 
+range of 50-90 %, depending largely on the vectorized instruction set used. 
+The number of threads, defaults to the number of virtual cores on the system. The 
+ideal number of threads is typically the number of physical cores, irrespective 
+of Intel Hyperthreading®. 
+
 Source and Windows Python 3.6 wheels are provided.
 
 Here is a simple example to generate Perlin-style noise on a 3D rectilinear 
@@ -47,10 +54,17 @@ Check it out at:
 
 http://pyfastnoisesimd.readthedocs.io
 
+
 Benchmarks
 ---------- 
 
-The first test is used the default mode, a cubic grid, ``Noise.genAsGrid()``.
+Generally speaking thread scaling is higher on machines with SSE4 support only, 
+as most CPUs throttle clock speed down to limit heat generation with AVX2. 
+As such, AVX2 is only about 1.5x faster than SSE4 whereas on a pure SIMD 
+instruction length basis (4 versus 8) you would expect it to be x2 faster.
+
+The first test is used the default mode, a cubic grid, ``Noise.genAsGrid()``, 
+from ``examples\gridded_noise.py``:
 
 **Array shape**: [8,1024,1024]
 **CPU**: Intel i7-7820X Skylake-X (8 cores, 3.6 GHz), Windows 7
@@ -63,7 +77,6 @@ Computed 8388608 voxels cellular noise in 0.298 s
 Computed 8388608 voxels Perlin noise in 0.054 s
     6.4 ns/voxel
 
-
 Multi-threaded (8 threads) mode
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Computed 8388608 voxels cellular noise in 0.044 s
@@ -73,24 +86,27 @@ Computed 8388608 voxels Perlin noise in 0.013 s
     1.5 ns/voxel
     431.3 % thread scaling
 
-
 The alternative mode is ``Noise.getFromCoords()`` where the user provides the 
-coordinates in Cartesian-space:
+coordinates in Cartesian-space, from ``examples\GallPeters_projection.py``:
 
-Single-threaded mode
-~~~~~~~~~~~~~~~~~~~
-* Generated noise from 2666000 coordinates with 1 workers in 1.935e-02 s (7.3 ns/pixel)
+Single threaded mode
+~~~~~~~~~~~~~~~~~~~~
+Generated noise from 2666000 coordinates with 1 workers in 1.766e-02 s
+    6.6 ns/pixel
 
-Multi-threaded (8 threads) mode
+Multi-threaded (4 threads) mode
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Not implemented at present
-
+Generated noise from 2666000 coordinates with 4 workers in 6.161e-03 s
+    2.3 ns/pixel
+    286.6 % thread scaling
     
 Release Notes
 -------------
 
 **0.2.2**
 
+* Protected examples with ``if __name__ == '__main__'`` blocks.
+* Added multi-threaded operation to `Noise.genFromCoords()`.
 * Added `orthographic_projection.py` to `examples/`.
 * Updated doc-strings to accommodate `sphinx.napoleon` formatting.
 * Added Sphinx-docs in the `doc` directory.

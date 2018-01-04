@@ -609,7 +609,7 @@ class Noise(object):
         * start: the starting coordinates for generation of the grid.
           I.e. the coordinates are essentially `start: start + shape`
 
-        Usage example::
+        Example::
 
             import numpy as np
             import pyfastnoisesimd as fns 
@@ -658,7 +658,7 @@ class Noise(object):
         Returns: 
             noise: a shape (N,) array of the generated noise values.
 
-        Usage example::
+        Example::
 
             import numpy as np
             import pyfastnoisesimd as fns 
@@ -677,7 +677,6 @@ class Noise(object):
                 generate this array. Alternatively use ``numpy.require()``. 
                 Failure to observe these restrictions can lead to segmentation 
                 faults.
-
         '''
 
         # Check that coords is C-aligned, contiguous, shape (3,N), N is 
@@ -700,35 +699,18 @@ class Noise(object):
         zPtr = coords.__array_interface__['data'][0]
         yPtr = zPtr + 4*size
         xPtr = yPtr + 4*size
-
-        self._fns.NoiseFromCoords(noisePtr, zPtr, yPtr, xPtr, size, 0)
-        return noise
-        '''
-        # TODO: fix seg-faults in multi-threaded operation.
         if self._asyncExecutor._max_workers <= 1:
             self._fns.NoiseFromCoords(noisePtr, zPtr, yPtr, xPtr, size, 0)
             return noise
 
         simdBlocks = size // simdLen
         numWorkers = np.minimum( self._asyncExecutor._max_workers, simdBlocks)
-        print( 'Parallel genFromCoords using {} workers'.format(numWorkers) )
 
         chunkLen = (simdBlocks // numWorkers) * simdLen
         chunkBytes = 4 * chunkLen
 
-        print( 'simdBlocks = {}, chunkLen = {}, chunkBytes = {}'.format(simdBlocks, chunkLen, chunkBytes) )
-        print( 'Noise extent: {:X} to {:X}'.format(noise.__array_interface__['data'][0], noise.__array_interface__['data'][0]+noise.nbytes) )
-        print( 'Coords extent: {:X} to {:X}'.format(coords.__array_interface__['data'][0], coords.__array_interface__['data'][0]+coords.nbytes)) 
-        print( 'Coords Z: {:X}'.format(coords[0,:].__array_interface__['data'][0]) )
-        print( 'Coords Y: {:X}'.format(coords[1,:].__array_interface__['data'][0]) )
-        print( 'Coords X: {:X}'.format(coords[2,:].__array_interface__['data'][0]) )
         workers = []
         for I in range(numWorkers-1):
-            print( '{}: noisePtr = {:X}'.format(I, noisePtr + I*chunkBytes) )
-            print( '{}: zPtr = {:X}'.format(I, zPtr + I*chunkBytes) )
-            print( '{}: yPtr = {:X}'.format(I, yPtr + I*chunkBytes) )
-            print( '{}: xPtr = {:X}'.format(I, xPtr + I*chunkBytes) )
-            
             workers.append( 
                 self._asyncExecutor.submit(
                     self._fns.NoiseFromCoords, 
@@ -737,11 +719,6 @@ class Noise(object):
         # Last worker takes any odd simdBlocks to the end of the array
         lastChunkLen = size - (numWorkers-1)*chunkLen
         I += 1
-        print( 'lastChunkLen = {}'.format(lastChunkLen))
-        print( 'last{}: noisePtr = {:X}'.format(I, noisePtr + I*chunkBytes) )
-        print( 'last{}: zPtr = {:X}'.format(I, zPtr + I*chunkBytes) )
-        print( 'last{}: yPtr = {:X}'.format(I, yPtr + I*chunkBytes) )
-        print( 'last{}: xPtr = {:X}'.format(I, xPtr + I*chunkBytes) )
         
         workers.append( 
             self._asyncExecutor.submit(
@@ -750,9 +727,8 @@ class Noise(object):
 
         for peon in workers:
             peon.result()
-        print( "Peons done")
         return noise
-        '''
+        
 
 
 #######################################################

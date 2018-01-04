@@ -100,6 +100,11 @@ class FNS_Tests(unittest.TestCase):
         coords[1,:] = np.arange(-16,16)
         coords[2,:] = np.linspace(-1.0, 1.0, X)
         noise.genFromCoords(coords)
+
+        # Re-use coords to make sure the array isn't accidently free'd 
+        # in FastNoiseSIMD
+        noise2 = fns.Noise(seed=None, numWorkers=numWorkers)
+        noise2.genFromCoords(coords)
         return
 
     def test_grid_1(self):
@@ -110,6 +115,9 @@ class FNS_Tests(unittest.TestCase):
 
     def test_coords_1(self):
         self.coords(1)
+
+    def test_coords_4(self):
+        self.coords(4)
     
 
 def test(verbosity=2):

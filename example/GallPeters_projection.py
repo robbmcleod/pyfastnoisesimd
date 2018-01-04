@@ -13,74 +13,89 @@ import numpy.testing as npt
 # It is somewhat better behaved numerically than the classic Mercator projection.
 # https://en.wikipedia.org/wiki/Mercator_projection
 
-freq = 0.1
-shape = (1333, 2000)
-# Make a sphere with a radius of 40.0 `units`
-radius = 40.0 
-inverseRadius = 1.0/radius
-# Generate an evenly spaced 2D mesh of projection X-Y coordinates over its surface.
-X, Y = np.meshgrid( np.linspace(-np.pi*radius, np.pi*radius, shape[1], endpoint=False), 
-                    np.linspace(-np.pi*radius, np.pi*radius, shape[0], endpoint=False))
-X = X.astype('float32').ravel()
-Y = Y.astype('float32').ravel()
-# Generate lambda (meridian) and phi (parallel) angles in radians, from the 
-# projection formula
-meridian = X * inverseRadius
-parallel = np.arcsin((0.5*inverseRadius) * Y)
+if __name__ == '__main__':
+    N_threads = 4
 
-# Show the sampling (essentially Tissot's indicatrices):
-'''
-plt.figure()
-plt.plot( meridian, parallel, 'k.' )
-plt.xlabel( 'meridian (rad)' )
-plt.ylabel( 'Parallel (rad)' )
-plt.title( 'meridian and parallel sampling space')
-'''
+    freq = 0.1
+    shape = (1333, 2000)
+    # Make a sphere with a radius of 40.0 `units`
+    radius = 40.0 
+    inverseRadius = 1.0/radius
+    # Generate an evenly spaced 2D mesh of projection X-Y coordinates over its surface.
+    X, Y = np.meshgrid( np.linspace(-np.pi*radius, np.pi*radius, shape[1], endpoint=False), 
+                        np.linspace(-np.pi*radius, np.pi*radius, shape[0], endpoint=False))
+    X = X.astype('float32').ravel()
+    Y = Y.astype('float32').ravel()
+    # Generate lambda (meridian) and phi (parallel) angles in radians, from the 
+    # projection formula
+    meridian = X * inverseRadius
+    parallel = np.arcsin((0.5*inverseRadius) * Y)
 
-# Make your Noise object
-bumps = fns.Noise(seed=42, numWorkers=1)
-bumps.noiseType = fns.NoiseType.Perlin
-bumps.frequency = freq
-print( 'FastNoiseSIMD maximum supported SIMD instruction level: {}'.format(bumps.SIMDLevel) )
+    # Show the sampling (essentially Tissot's indicatrices):
+    '''
+    plt.figure()
+    plt.plot( meridian, parallel, 'k.' )
+    plt.xlabel( 'meridian (rad)' )
+    plt.ylabel( 'Parallel (rad)' )
+    plt.title( 'meridian and parallel sampling space')
+    '''
 
-# Generate an empty-array of 3D cartesian coordinates. You can use NumPy
-# arrays from other sources but see the warnings in `Noise.genFromCoords()`
-coords = fns.emptyCoords(meridian.size)
+    # Make your Noise object
+    bumps = fns.Noise(seed=42, numWorkers=N_threads)
+    bumps.noiseType = fns.NoiseType.Perlin
+    bumps.frequency = freq
+    print( 'FastNoiseSIMD maximum supported SIMD instruction level: {}'.format(bumps.SIMDLevel) )
 
-# Fill coords with Cartesian coordinates in 3D
-# (Note that normally zenith starts at 0.0 rad, whereas we want the equator to be 
-# 0.0 rad, so we swap cos/sin for the `parallel` axis)
-coords[0,:meridian.size] = radius*np.sin(parallel)                   # Z
-coords[1,:meridian.size] = radius*np.cos(parallel)*np.sin(meridian)  # Y
-coords[2,:meridian.size] = radius*np.cos(parallel)*np.cos(meridian)  # X
+    # Generate an empty-array of 3D cartesian coordinates. You can use NumPy
+    # arrays from other sources but see the warnings in `Noise.genFromCoords()`
+    coords = fns.emptyCoords(meridian.size)
 
-# Check that we have spherical coordinates as expected:
-'''
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-ax.scatter( coords[2,:], coords[1,:], coords[0,:], 'k.' )
-ax.set_xlabel('X')
-ax.set_ylabel('Y')
-ax.set_zlabel('Z')
-ax.set_title('3D coordinate sampling')
-'''
+    # Fill coords with Cartesian coordinates in 3D
+    # (Note that normally zenith starts at 0.0 rad, whereas we want the equator to be 
+    # 0.0 rad, so we swap cos/sin for the `parallel` axis)
+    coords[0,:meridian.size] = radius*np.sin(parallel)                   # Z
+    coords[1,:meridian.size] = radius*np.cos(parallel)*np.sin(meridian)  # Y
+    coords[2,:meridian.size] = radius*np.cos(parallel)*np.cos(meridian)  # X
 
-t2 = perf_counter()
-result = bumps.genFromCoords(coords)
-t3 = perf_counter()
-print( 'Generated noise from {} coordinates with {} workers in {:.3e} s ({:.1f} ns/pixel)'.format(meridian.size, 1, t3-t2, 1e9*(t3-t2)/result.size) )
+    # Check that we have spherical coordinates as expected:
+    '''
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter( coords[2,:], coords[1,:], coords[0,:], 'k.' )
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_title('3D coordinate sampling')
+    '''
 
-# Unravel
-projection = result.reshape(shape)
+    bumps.numWorkers = 1
+    t2 = perf_counter()
+    result = bumps.genFromCoords(coords)
+    t3 = perf_counter()
+    print('#### Single threaded mode ####')
+    print('Generated noise from {} coordinates with {} workers in {:.3e} s'.format(meridian.size, 1, t3-t2))
+    print('    {:.1f} ns/pixel'.format(1e9*(t3-t2)/result.size))
 
-# Here we plot our projections, with both the conventional view, and a view 
-# rolled to see the far side to observe that the junction is smooth (i.e. that 
-# the heightmap is wrapped )
-plt.figure()
-plt.subplot(121)
-plt.imshow(projection, cmap='Greys')
-plt.title('Gall-Peters Projection')
-plt.subplot(122)
-plt.imshow( np.roll(projection, shape[1]//2, axis=1), cmap='Greys' )
-plt.title('Rotated 180\u00b0 to see junction')
-plt.show()
+    bumps.numWorkers = N_threads
+    t4 = perf_counter()
+    result = bumps.genFromCoords(coords)
+    t5 = perf_counter()
+    print('#### Multi-threaded ({} threads) mode ####'.format(N_threads) )
+    print('Generated noise from {} coordinates with {} workers in {:.3e} s'.format(meridian.size, N_threads, t5-t4))
+    print('    {:.1f} ns/pixel'.format(1e9*(t5-t4)/result.size))
+    print('    {:.1f} % thread scaling'.format((t3-t2)/(t5-t4)*100.0))
+
+    # Unravel
+    projection = result.reshape(shape)
+
+    # Here we plot our projections, with both the conventional view, and a view 
+    # rolled to see the far side to observe that the junction is smooth (i.e. that 
+    # the heightmap is wrapped )
+    plt.figure()
+    plt.subplot(121)
+    plt.imshow(projection, cmap='Greys')
+    plt.title('Gall-Peters Projection')
+    plt.subplot(122)
+    plt.imshow( np.roll(projection, shape[1]//2, axis=1), cmap='Greys' )
+    plt.title('Rotated 180\u00b0 to see junction')
+    plt.show()

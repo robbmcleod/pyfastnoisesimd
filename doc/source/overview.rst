@@ -20,11 +20,22 @@ vectorized instruction set used. The number of threads, defaults to the number
 of virtual cores on the system. The ideal number of threads is typically the 
 number of physical cores, irrespective of Intel Hyperthreading®.
 
+Documentation
+-------------
+
+Check it out at: 
+
+http://pyfastnoisesimd.readthedocs.io
+
 Benchmarks
 ----------
 
 The combination of the optimized, SIMD-instruction level C library, and 
-multi-threading, means that `pyfastnoisesimd` is very, very fast.
+multi-threading, means that `pyfastnoisesimd` is very, very fast. Generally 
+speaking thread scaling is higher on machines with SSE4 support only, 
+as most CPUs throttle clock speed down to limit heat generation with AVX2. 
+As such, AVX2 is only about 1.5x faster than SSE4 whereas on a pure SIMD 
+instruction length basis (4 versus 8) you would expect it to be x2 faster.
 
 Configuration
 ~~~~~~~~~~~~~
@@ -34,6 +45,9 @@ Configuration
 
 With ``Noise.genAsGrid()``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The first test is used the default mode, a cubic grid, ``Noise.genAsGrid()``, 
+from ``examples\gridded_noise.py``:
 
 - **Array shape**: [8,1024,1024]
 
@@ -56,16 +70,19 @@ Computed 8388608 voxels Perlin noise in 0.013 s
 With ``Noise.getFromCoords()``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+The alternative mode is ``Noise.getFromCoords()`` where the user provides the 
+coordinates in Cartesian-space, from ``examples\GallPeters_projection.py``:
 - ``noiseType = Simplex``
 - ``peturbType = GradientFractal``
 
 **Single-threaded mode**
-
-Generated noise from 2666000 coordinates with 1 workers in 0.01935 s (7.3 ns/pixel)
+Generated noise from 2666000 coordinates with 1 workers in 1.766e-02 s
+    6.6 ns/pixel
 
 **Multi-threaded (8 threads) mode**
-
-Not implemented at present
+Generated noise from 2666000 coordinates with 4 workers in 6.161e-03 s
+    2.3 ns/pixel
+    286.6 % thread scaling
 
 
 
