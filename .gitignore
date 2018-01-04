@@ -12,7 +12,7 @@ dist
 *.egg-info
 __pycache__
 pyfastnoisesimd/version.py
-pyfastnoisesimd/fastnoisesimd/amd64_arch.h
+pyfastnoisesimd/fastnoisesimd/x86_flags.h
 example/*.png
 
 # User-specific files (MonoDevelop/Xamarin Studio)
