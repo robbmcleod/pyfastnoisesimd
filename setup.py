@@ -96,6 +96,7 @@ else:  # Linux
             'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_avx512.cpp'
         ],
         'cflags': [
+            '-std=c++11',
             '-mavx512f',
         ],
     }
@@ -104,6 +105,7 @@ else:  # Linux
             'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_avx2.cpp'
         ],
         'cflags': [
+            '-std=c++11',
             '-mavx2',
         ]
     }
@@ -112,6 +114,7 @@ else:  # Linux
             'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse41.cpp'
         ],
         'cflags': [
+            '-std=c++11',
             '-msse4.1',
         ],
     }
@@ -120,7 +123,8 @@ else:  # Linux
             'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse2.cpp'
         ],
         'cflags': [
-            '-msse2'
+            '-std=c++11',
+            '-msse2',
         ],
     }
     fma_flags = ['-mfma']
