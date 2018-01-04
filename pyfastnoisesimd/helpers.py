@@ -2,8 +2,34 @@ import pyfastnoisesimd.extension as ext
 import concurrent.futures as cf
 import numpy as np
 from enum import Enum
-from pyfastnoisesimd.cpuinfo import get_cpu_info
-cpu_info = get_cpu_info()
+# from pyfastnoisesimd.cpuinfo import get_cpu_info
+# cpu_info = get_cpu_info()
+
+def num_virtual_cores() -> int:
+    '''
+    Detects the number of virtual cores on a system without importing 
+    ``multiprocessing``. Borrowed from NumExpr 2.6.
+    '''
+    import os, subprocess
+    # Linux, Unix and MacOS
+    if hasattr(os, 'sysconf'):
+        if 'SC_NPROCESSORS_ONLN' in os.sysconf_names:
+            # Linux & Unix:
+            ncpus = os.sysconf('SC_NPROCESSORS_ONLN')
+            if isinstance(ncpus, int) and ncpus > 0:
+                return ncpus
+        else:  # OSX:
+            return int(subprocess.check_output(['sysctl', '-n', 'hw.ncpu']))
+    # Windows
+    if 'NUMBER_OF_PROCESSORS' in os.environ:
+        ncpus = int(os.environ['NUMBER_OF_PROCESSORS'])
+        if ncpus > 0:
+            return ncpus
+        else:
+            return 1
+    # TODO: need method for ARM7/8
+    return 1  # Default
+
 
 class NoiseType(Enum):
     '''

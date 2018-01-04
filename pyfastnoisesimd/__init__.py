@@ -12,7 +12,7 @@
 from pyfastnoisesimd.version import __version__
 
 from pyfastnoisesimd.helpers import (
-    Noise, emptyCoords,
+    Noise, emptyCoords, num_virtual_cores,
     generate, setNumWorkers, 
     NoiseType, FractalType, PerturbType, 
     CellularReturnType, CellularDistanceFunction)
@@ -21,5 +21,5 @@ import pyfastnoisesimd.extension as _ext
 
 from pyfastnoisesimd.test_fns import test
 
-from pyfastnoisesimd.cpuinfo import get_cpu_info
-cpu_info = get_cpu_info()
+# from pyfastnoisesimd.cpuinfo import get_cpu_info
+# cpu_info = get_cpu_info()
