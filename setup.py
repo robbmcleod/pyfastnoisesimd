@@ -16,9 +16,12 @@ import os
 import platform
 import re
 import sys
+import tempfile
 
+from distutils.ccompiler import new_compiler
 from distutils.command.build import build as _build
 from distutils.errors import CCompilerError, DistutilsOptionError
+from distutils.sysconfig import customize_compiler
 from setuptools import Extension
 from setuptools import setup
 from glob import glob
@@ -150,6 +153,9 @@ class build(_build):
     def finalize_options(self):
         _build.finalize_options(self)
 
+        compiler = new_compiler(compiler=self.compiler, verbose=self.verbose)
+        customize_compiler(compiler)
+
         disabled_libraries = []
         for name, lib in self.distribution.libraries:
             val = getattr(self, 'with_' + name)
@@ -161,9 +167,7 @@ class build(_build):
                 disabled_libraries.append(name)
                 continue
 
-            is_available = True  # TODO: Actually check compiler.
-
-            if not is_available:
+            if not self.compiler_has_flags(compiler, name, lib['cflags']):
                 if val == 'yes':
                     # Explicitly required but not available.
                     raise CCompilerError('%s is not supported by your '
@@ -177,9 +181,13 @@ class build(_build):
             if fma_flags is None:
                 # No flags required.
                 use_fma = True
-            else:
-                # TODO: Actually check compiler.
+            elif self.compiler_has_flags(compiler, 'fma', fma_flags):
                 use_fma = True
+                avx512['cflags'] += fma_flags
+                avx2['cflags'] += fma_flags
+            elif self.with_fma == 'yes':
+                # Explicitly required but not available.
+                raise CCompilerError('FMA is not supported by your compiler.')
 
         self.distribution.libraries = [lib
                                        for lib in self.distribution.libraries
@@ -192,6 +200,27 @@ class build(_build):
                 fh.write(b'#define FN_COMPILE_%b\n' % (name.upper().encode('ascii', )))
             if use_fma:
                 fh.write(b'#define FN_USE_FMA\n')
+
+    def compiler_has_flags(self, compiler, name, flags):
+        cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.chdir(tmpdir)
+            try:
+                test_file = 'test-%s.cpp' % (name, )
+                with open(test_file, 'w') as fd:
+                    fd.write('int main(void) { return 0; }')
+
+                try:
+                    compiler.compile([test_file], extra_preargs=flags)
+                except CCompilerError:
+                    self.warn('Compiler does not support %s flags: %s' %
+                              (name, ' '.join(flags)))
+                    return False
+
+            finally:
+                os.chdir(cwd)
+
+        return True
 
 
 # List classifiers:
