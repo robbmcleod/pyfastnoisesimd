@@ -16,10 +16,12 @@ import os
 import platform
 import re
 import sys
+import tempfile
 
-sys.path.append( os.path.join(os.path.abspath('.'), 'pyfastnoisesimd')  )
-import cpuinfo # Is up one directory
-
+from distutils.ccompiler import new_compiler
+from distutils.command.build import build as _build
+from distutils.errors import CCompilerError, DistutilsOptionError
+from distutils.sysconfig import customize_compiler
 from setuptools import Extension
 from setuptools import setup
 from glob import glob
@@ -37,14 +39,12 @@ VERSION = "%d.%d.%d%s" % (major_ver, minor_ver, nano_ver, branch)
 # Create the version.py file
 open('pyfastnoisesimd/version.py', 'w').write('__version__ = "%s"\n' % VERSION)
 
-# Global variables
-CFLAGS = os.environ.get('CFLAGS', '').split()
-LFLAGS = os.environ.get('LFLAGS', '').split()
-
 # Sources and headers
-sources = [  
+sources = [
     'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD.cpp',
-    'pyfastnoisesimd/wrapper.cpp' 
+    'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_internal.cpp',
+    'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_neon.cpp',
+    'pyfastnoisesimd/wrapper.cpp'
 ]
 inc_dirs = [get_include(), 'pyfastnoisesimd', 'pyfastnoisesimd/fastnoisesimd/']
 lib_dirs = []
@@ -54,100 +54,188 @@ def_macros = []
 with open('README.rst') as fh:
     long_desc = fh.read()
 
-# Auto-detect the architecture and set the CFLAGS appropriately.
-cpu_info = cpuinfo.get_cpu_info()
-# To force compilation with AVX2 support, uncomment the append below:
-# cpu_info['flags'].append('avx2') 
-# AVX512 doesn't work in trials, possibly ICC is required:
-# cpu_info['flags'].append('avx512f') 
+if os.name == 'nt':
+    extra_cflags = []
+    avx512 = {
+        'sources': [
+            'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_avx512.cpp'
+        ],
+        'cflags': [
+            '/arch:AVX512',
+        ],
+    }
+    avx2 = {
+        'sources': [
+            'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_avx2.cpp'
+        ],
+        'cflags': [
+            '/arch:AVX2',
+        ]
+    }
+    sse41 = {
+        'sources': [
+            'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse41.cpp'
+        ],
+        'cflags': [
+            '/arch:SSE2',
+        ],
+    }
+    sse2 = {
+        'sources': [
+            'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse2.cpp'
+        ],
+        'cflags': [
+            '/arch:SSE2',
+        ],
+    }
+    fma_flags = None
+else:  # Linux
+    extra_cflags = ['-std=c++11']
+    avx512 = {
+        'sources': [
+            'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_avx512.cpp'
+        ],
+        'cflags': [
+            '-std=c++11',
+            '-mavx512f',
+        ],
+    }
+    avx2 = {
+        'sources': [
+            'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_avx2.cpp'
+        ],
+        'cflags': [
+            '-std=c++11',
+            '-mavx2',
+        ]
+    }
+    sse41 = {
+        'sources': [
+            'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse41.cpp'
+        ],
+        'cflags': [
+            '-std=c++11',
+            '-msse4.1',
+        ],
+    }
+    sse2 = {
+        'sources': [
+            'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse2.cpp'
+        ],
+        'cflags': [
+            '-std=c++11',
+            '-msse2',
+        ],
+    }
+    fma_flags = ['-mfma']
+
+clibs = [
+    ('avx512', avx512),
+    ('avx2', avx2),
+    ('sse41', sse41),
+    ('sse2', sse2),
+]
 
 
-# TODO: Need a new cpuinfo.py to detect AVX512 and FMA support.
+class build(_build):
+    user_options = _build.user_options + [
+        ('with-avx512=', None, 'Use AVX512 instructions: auto|yes|no'),
+        ('with-avx2=', None, 'Use AVX2 instructions: auto|yes|no'),
+        ('with-sse41=', None, 'Use SSE4.1 instructions: auto|yes|no'),
+        ('with-sse2=', None, 'Use SSE2 instructions: auto|yes|no'),
+        ('with-fma=', None, 'Use FMA instructions: auto|yes|no'),
+    ]
 
-sse_arch = b'''\
-// SSE2 is supported by all x86_64 architecture processors.
-#define FN_COMPILE_SSE2
-#define FN_COMPILE_SSE41
+    def initialize_options(self):
+        _build.initialize_options(self)
+        self.with_avx512 = 'auto'
+        self.with_avx2 = 'auto'
+        self.with_sse41 = 'auto'
+        self.with_sse2 = 'auto'
+        self.with_fma = 'auto'
 
-'''
-avx2_arch = b'''\
-// To compile AVX2 set C++ code generation to use /arch:AVX(2) on FastNoiseSIMD_avx2.cpp with MSVC
-// and -mavx2 with GCC
-// Note: This does not break support for pre AVX CPUs, AVX code is only run if support is detected
-#define FN_COMPILE_AVX2
+    def finalize_options(self):
+        _build.finalize_options(self)
 
-'''
-avx512_arch = b'''\
-// Only the latest compilers will support this
-// GCC has two march flags for avx512, -march=knl (Knight's Landing) and -march=skylake-avx512
-#define FN_COMPILE_AVX512
+        compiler = new_compiler(compiler=self.compiler, verbose=self.verbose)
+        customize_compiler(compiler)
 
-'''
-fma_arch = b'''\
-// Using FMA instructions with AVX(51)2/NEON provides a small performance increase but can cause 
-// minute variations in noise output compared to other SIMD levels due to higher calculation precision
-// Intel compiler will always generate FMA instructions, use /Qfma- or -no-fma to disable
-#define FN_USE_FMA
+        disabled_libraries = []
+        for name, lib in self.distribution.libraries:
+            val = getattr(self, 'with_' + name)
+            if val not in ('auto', 'yes', 'no'):
+                raise DistutilsOptionError('with_%s flag must be auto, yes, '
+                                           'or no, not "%s".' % (name, val))
 
-'''
+            if val == 'no':
+                disabled_libraries.append(name)
+                continue
 
-with open( 'pyfastnoisesimd/fastnoisesimd/amd64_arch.h', 'wb') as fh:
-    fh.write( b'// This file is generated by setup.py, do not edit it by hand\n' )
-    if os.name == 'nt':
-        if cpu_info['arch'] == 'AARCH_64': # Found Neon ARM
-            # Detected by compiler flags
-            pass
+            if not self.compiler_has_flags(compiler, name, lib['cflags']):
+                if val == 'yes':
+                    # Explicitly required but not available.
+                    raise CCompilerError('%s is not supported by your '
+                                         'compiler.' % (name, ))
+                disabled_libraries.append(name)
 
-        # WARNING: the AVX512 detection in `cpuinfo.py` has never been tested
-        elif 'avx512f' in cpu_info['flags']: # Found AVX512 Foundation support
-            # Technically no Windows Python compiler supports AVX512, because 
-            # only MSVC2017 supports it and Python 3.6 runs on MSVC2015.
-            CFLAGS += ['/arch:AVX512']
-            fh.write( avx512_arch )
-            if 'fma' in cpu_info['flags']:
-                fh.write( fma_arch )
+        use_fma = False
+        if (self.with_fma != 'no' and
+                ('avx512' not in disabled_libraries or
+                 'avx2' not in disabled_libraries)):
+            if fma_flags is None:
+                # No flags required.
+                use_fma = True
+            elif self.compiler_has_flags(compiler, 'fma', fma_flags):
+                use_fma = True
+                avx512['cflags'] += fma_flags
+                avx2['cflags'] += fma_flags
+            elif self.with_fma == 'yes':
+                # Explicitly required but not available.
+                raise CCompilerError('FMA is not supported by your compiler.')
 
-        elif 'avx2' in cpu_info['flags']: # Found AVX2 support
-            sources += ['pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_avx2.cpp']
-            CFLAGS += ['/arch:AVX2']
-            fh.write( avx2_arch )
-            if 'fma' in cpu_info['flags']:
-                fh.write( fma_arch )
+        self.distribution.libraries = [lib
+                                       for lib in self.distribution.libraries
+                                       if lib[0] not in disabled_libraries]
 
-        elif 'sse2' in cpu_info['flags']: # Found SSE2
-            sources += ['pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse2.cpp', 'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse41.cpp' ]
-            # The /arch:SSE2 flag is unnecessary on AMD64 architecture and emits a useless warning.
-            # CFLAGS += ['/arch:SSE2']
-            fh.write( sse_arch )
+        with open('pyfastnoisesimd/fastnoisesimd/x86_flags.h', 'wb') as fh:
+            fh.write(b'// This file is generated by setup.py, '
+                     b'do not edit it by hand\n')
+            for name, lib in self.distribution.libraries:
+                fh.write(b'#define FN_COMPILE_%b\n' % (name.upper().encode('ascii', )))
+            if use_fma:
+                fh.write(b'#define FN_USE_FMA\n')
 
+    def compiler_has_flags(self, compiler, name, flags):
+        if compiler.compiler_type == 'msvc':
+            # MSVC is special; it ignores and warns about unknown flags, but
+            # also flags unnecessary on an arch. Fortunately, we only need to
+            # know about a few versions used to compile Python.
+            # TODO: Update when some version of Python is compiled with VC2017.
+            if name == 'avx512' and sys.version_info <= (9999, ):
+                return False
+            else:
+                return True
 
-    else: # Linux
-        CFLAGS += ['-std=c++11']
-        if cpu_info['arch'] == 'ARM_8': # Detected by compiler flags
-            pass
+        cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.chdir(tmpdir)
+            try:
+                test_file = 'test-%s.cpp' % (name, )
+                with open(test_file, 'w') as fd:
+                    fd.write('int main(void) { return 0; }')
 
-        # WARNING: the AVX512 detection in `cpuinfo.py` has never been tested
-        elif 'avx512f' in cpu_info['flags']: # Found AVX512 Foundation support
-            # Not sure if anything but the foundational functions are called...
-            CFLAGS += ['-mavx512f']
-            fh.write( avx512_arch )
-            if 'fma' in cpu_info['flags']:
-                CFLAGS += ['-mfma']
-                fh.write( fma_arch )
+                try:
+                    compiler.compile([test_file], extra_preargs=flags)
+                except CCompilerError:
+                    self.warn('Compiler does not support %s flags: %s' %
+                              (name, ' '.join(flags)))
+                    return False
 
-        elif 'avx2' in cpu_info['flags']: # Found AVX2 support
-            sources += ['pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_avx2.cpp']
-            CFLAGS += ['-mavx2']
-            fh.write( avx2_arch )
-            if 'fma' in cpu_info['flags']:
-                CFLAGS += ['-mfma']
-                fh.write( fma_arch )
+            finally:
+                os.chdir(cwd)
 
-        elif 'sse2' in cpu_info['flags']: # Found SSE2
-            sources += ['pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse2.cpp', 'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse41.cpp' ]
-            CFLAGS += ['-msse2', '-msse4.1']
-            fh.write( sse_arch )
-        
+        return True
+
 
 # List classifiers:
 # https://pypi.python.org/pypi?%3Aaction=list_classifiers
@@ -177,6 +265,8 @@ setup(name = "pyfastnoisesimd",
       url = 'http://github.com/robbmcleod/pyfastnoisesimd',
       license = 'https://opensource.org/licenses/BSD-3-Clause',
       platforms = ['any'],
+      libraries = clibs,
+      cmdclass = {'build': build},
       ext_modules = [
         Extension( "pyfastnoisesimd.extension",
                    include_dirs=inc_dirs,
@@ -184,8 +274,7 @@ setup(name = "pyfastnoisesimd",
                    sources=sources,
                    library_dirs=lib_dirs,
                    libraries=libs,
-                   extra_link_args=LFLAGS,
-                   extra_compile_args=CFLAGS ),
+                   extra_compile_args=extra_cflags),
         ],
       # tests_require=tests_require,
       packages = ['pyfastnoisesimd'],
