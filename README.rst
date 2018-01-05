@@ -54,6 +54,21 @@ Check it out at:
 
 http://pyfastnoisesimd.readthedocs.io
 
+Installation
+------------
+
+`pyfastnoisesimd` is available on PyPI, and may be installed via `pip`:
+
+    pip install -v pyfastnoisesimd
+
+On Windows, a wheel is provided for Python 3.6 only. Building from source or 
+compiling the extension for 3.5 will require either MS Visual Studio 2015 or 
+MSVC2015 Build Tools:
+
+http://landinghub.visualstudio.com/visual-cpp-build-tools
+
+On Linux or OSX, only a source distribution is provided and installation 
+requires `gcc` or `clang`.  
 
 Benchmarks
 ---------- 
@@ -103,9 +118,10 @@ Generated noise from 2666000 coordinates with 4 workers in 6.161e-03 s
 Release Notes
 -------------
 
-**0.2.2**
+**0.3.0**
 
-* Protected examples with ``if __name__ == '__main__'`` blocks.
+* Elliott Sales de Andrade fixed a number of issues with installation to 
+  build cleanly and better handle CPU SIMD capabilities.
 * Added multi-threaded operation to `Noise.genFromCoords()`.
 * Added `orthographic_projection.py` to `examples/`.
 * Updated doc-strings to accommodate `sphinx.napoleon` formatting.
@@ -172,3 +188,14 @@ Download links for a GUI-based reference noise generator may be found at:
 
 https://github.com/Auburns/FastNoiseSIMD/releases
 
+
+Authors
+-------
+
+Robert A. McLeod wrote the Python wrapper, implemented multi-threading, and 
+wrote the documentation.
+
+Elliott Sales de Andrade contributed a number of fixes to allow building to 
+succeed on many platforms.
+
+Jordan Peck wrote the underlying library `FastNoiseSIMD`.
