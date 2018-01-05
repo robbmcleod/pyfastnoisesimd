@@ -503,7 +503,7 @@ class Noise(object):
         if bool(numWorkers):
             self._asyncExecutor = cf.ThreadPoolExecutor(max_workers = numWorkers)
         else:
-            self._asyncExecutor = cf.ThreadPoolExecutor(max_workers = cpu_info['count'])
+            self._asyncExecutor = cf.ThreadPoolExecutor(max_workers = num_virtual_cores())
 
         # Sub-classed object handles
         self.fractal = FractalClass(self._fns)
