@@ -564,15 +564,17 @@ PyFNS_FillNoiseSet(FNSObject *self, PyObject *args)
     // Fill an existing empty array, used for multi-threaded operation
     // PyObject* noiseObj;
     float* noisePtr;
+    long long noisePtr_val;
     int xStart, yStart, zStart;
     int dims[3] = {0, 0, 0};
     float scaleMod = 1.0;
     const char *format = "Liiiiii|f";
 
-    if (!PyArg_ParseTuple(args, format, &noisePtr, &zStart, &yStart, &xStart, &dims[0], &dims[1], &dims[2], &scaleMod))
+    if (!PyArg_ParseTuple(args, format, &noisePtr_val, &zStart, &yStart, &xStart, &dims[0], &dims[1], &dims[2], &scaleMod))
     {
         return NULL;
     }
+    noisePtr = (float *)noisePtr_val;
     // noisePtr = (float *)PyArray_GETPTR3((PyArrayObject *)noiseObj, 0, 0, 0);
 
     
@@ -592,11 +594,16 @@ PyFNS_NoiseFromCoords(FNSObject *self, PyObject *args)
     FastNoiseVectorSet vector;
     int size, offset;
     float *noisePtr, *xPtr, *yPtr, *zPtr;
+    long long noisePtr_val, xPtr_val, yPtr_val, zPtr_val;
 
-    if (!PyArg_ParseTuple(args, "LLLLii", &noisePtr, &zPtr, &yPtr, &xPtr, &size, &offset))
+    if (!PyArg_ParseTuple(args, "LLLLii", &noisePtr_val, &zPtr_val, &yPtr_val, &xPtr_val, &size, &offset))
     {
         return NULL;
     }
+    noisePtr = (float *)noisePtr_val;
+    xPtr = (float *)xPtr_val;
+    yPtr = (float *)yPtr_val;
+    zPtr = (float *)zPtr_val;
 
     Py_BEGIN_ALLOW_THREADS // Release GIL
     vector.size = size;
