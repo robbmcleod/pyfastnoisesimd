@@ -67,8 +67,13 @@ MSVC2015 Build Tools:
 
 http://landinghub.visualstudio.com/visual-cpp-build-tools
 
+No Python versions compile with MSVC2017 yet, which is the newest version to 
+support AVX512. Only Python 3.5/3.6 support AVX2 on Windows.
+
 On Linux or OSX, only a source distribution is provided and installation 
-requires `gcc` or `clang`.  
+requires `gcc` or `clang`. For AVX512 support with GCC, GCC7.2+ is required, lower 
+versions will compile with AVX2/SSE4.1/SSE2 support only. GCC earilier than
+4.7 disables AVX2 as well.
 
 Benchmarks
 ---------- 

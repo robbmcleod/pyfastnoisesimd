@@ -34,7 +34,12 @@
 #ifdef FN_COMPILE_SSE41
 #define SIMD_LEVEL_H FN_SSE41
 #include "FastNoiseSIMD_internal.h"
-#include <smmintrin.h> //SSE4.1
+#ifdef _WIN32
+#include <intrin.h>
+// ARM not relevant for SSE4.1
+#else // 'nix
+#include <x86intrin.h>
+#endif
 
 #define SIMD_LEVEL FN_SSE41
 #include "FastNoiseSIMD_internal.cpp"

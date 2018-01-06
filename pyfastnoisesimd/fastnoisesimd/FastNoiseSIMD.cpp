@@ -33,6 +33,8 @@
 #include <algorithm>
 #include <cstdint>
 
+
+
 #ifdef FN_COMPILE_NO_SIMD_FALLBACK
 #define SIMD_LEVEL_H FN_NO_SIMD_FALLBACK
 #include "FastNoiseSIMD_internal.h"
@@ -63,6 +65,7 @@
 #include "FastNoiseSIMD_internal.h"
 #endif
 
+// RAM: move up this block so that <intrin.h> or <x86intrin.h> are always included
 // CPUid
 #ifdef _WIN32
 #include <intrin.h>
@@ -70,12 +73,12 @@
 #if !defined(__aarch64__) && !defined(FN_IOS)
 #include "ARM/cpu-features.h"
 #endif
-#else
+#else // 'nix
 #include <cpuid.h>
 #include "inttypes.h"
 #endif
-
 int FastNoiseSIMD::s_currentSIMDLevel = -1;
+
 
 #ifdef FN_ARM
 int GetFastestSIMD()

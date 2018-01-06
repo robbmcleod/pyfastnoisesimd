@@ -221,11 +221,11 @@ static SIMDf VECTORCALL FUNC(FLOOR)(SIMDf a)
 #elif SIMD_LEVEL == FN_AVX512
 
 #ifdef FN_ALIGNED_SETS
-#define SIMDf_STORE(p,a) _mm512_store_ps(p,a)
-#define SIMDf_LOAD(p) _mm512_load_ps(p)
+	#define SIMDf_STORE(p,a) _mm512_store_ps(p,a)
+	#define SIMDf_LOAD(p) _mm512_load_ps(p)
 #else
-#define SIMDf_STORE(p,a) _mm512_storeu_ps(p,a)
-#define SIMDf_LOAD(p) _mm512_loadu_ps(p)
+	#define SIMDf_STORE(p,a) _mm512_storeu_ps(p,a)
+	#define SIMDf_LOAD(p) _mm512_loadu_ps(p)
 #endif
 
 #define SIMDf_UNDEFINED() _mm512_undefined_ps()

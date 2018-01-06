@@ -34,7 +34,12 @@
 #ifdef FN_COMPILE_SSE2
 #define SIMD_LEVEL_H FN_SSE2
 #include "FastNoiseSIMD_internal.h"
-#include <emmintrin.h> //SSE2
+#ifdef _WIN32
+#include <intrin.h>
+// ARM not relevant for SSE2
+#else // 'nix
+#include <x86intrin.h>
+#endif
 
 #define SIMD_LEVEL FN_SSE2
 #include "FastNoiseSIMD_internal.cpp"

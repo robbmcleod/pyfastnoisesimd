@@ -40,9 +40,18 @@
 #endif
 #endif
 
+// gcc include paths:
+// gcc -xc++ -E -v -march=avx512 -
+// on my machine they were at /usr/lib/gcc/x86_64-linux-gnu/
+
 #define SIMD_LEVEL_H FN_AVX512
 #include "FastNoiseSIMD_internal.h"
-#include <intrin.h> //AVX512
+#ifdef _WIN32
+#include <intrin.h>
+// ARM not relevant for AVX512
+#else // 'nix
+#include <x86intrin.h>
+#endif
 
 #define SIMD_LEVEL FN_AVX512
 #include "FastNoiseSIMD_internal.cpp"

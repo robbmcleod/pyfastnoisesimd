@@ -1,5 +1,20 @@
 The following is a guide for making a release on PyPI.
 
+Installing GCC7.2 on Ubuntu 17.04
+---------------------------------
+
+The current version of Python is compiled with GCC 7.2 on Linux platforms, and 
+the older versions of GCC are missing some of the SIMD intrinsics for AVX512.
+To test AVX512 builds, install GCC 7.X as:
+
+    sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+    sudo apt update
+    sudo apt install gcc-7 g++-7
+
+and to temporarily use gcc-7:
+
+    alias gcc=gcc-7
+    
 Preliminaries
 -------------
 

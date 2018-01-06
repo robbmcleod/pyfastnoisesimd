@@ -17,6 +17,7 @@ import platform
 import re
 import sys
 import tempfile
+import subprocess
 
 from distutils.ccompiler import new_compiler
 from distutils.command.build import build as _build
@@ -179,6 +180,35 @@ class build(_build):
         customize_compiler(compiler)
 
         disabled_libraries = []
+
+        # Section for custom limits imposed on the SIMD instruction levels based 
+        # on the installed compiler
+        plat_compiler = platform.python_compiler()
+        if plat_compiler.lower().startswith('gcc'):
+            # Check the installed gcc version, as versions older than 7.0 claim to
+            # support avx512 but are missing some intrinsics that FastNoiseSIMD calls
+            output = subprocess.check_output('gcc --version', shell=True)
+            gcc_version = tuple([int(x) for x in re.findall( b'\d+(?:\.\d+)+', output)[0].split(b'.')])
+            if gcc_version < (7,2): # Disable AVX512
+                disabled_libraries.append('avx512')
+            if gcc_version < (4,7): # Disable AVX2
+                disabled_libraries.append('avx2')
+        elif plat_compiler.lower().startswith('msc'):
+            # No versions of Windows Python support AVX512 yet, it is supported in 
+            # MSVC2017 only.
+            #                 MSVC++ 14.1 _MSC_VER == 1911 (Visual Studio 2017)
+            #                 MSVC++ 14.1 _MSC_VER == 1910 (Visual Studio 2017)
+            # Python 3.5/3.6: MSVC++ 14.0 _MSC_VER == 1900 (Visual Studio 2015)
+            # Python 3.4:     MSVC++ 10.0 _MSC_VER == 1600 (Visual Studio 2010)
+            # Python 2.7:     MSVC++ 9.0  _MSC_VER == 1500 (Visual Studio 2008)
+            # Here we just assume the user has the platform compiler
+            msc_version = int(re.findall('v\.\d+', plat_compiler)[0].lstrip('v.'))
+            if msc_version < 1910:
+                disabled_libraries.append('avx512')
+            if msc_version < 1900:
+                disabled_libraries.append('avx2')
+        # End of SIMD limits
+
         for name, lib in self.distribution.libraries:
             val = getattr(self, 'with_' + name)
             if val not in ('auto', 'yes', 'no'):
@@ -224,15 +254,6 @@ class build(_build):
                 fh.write(b'#define FN_USE_FMA\n')
 
     def compiler_has_flags(self, compiler, name, flags):
-        if compiler.compiler_type == 'msvc':
-            # MSVC is special; it ignores and warns about unknown flags, but
-            # also flags unnecessary on an arch. Fortunately, we only need to
-            # know about a few versions used to compile Python.
-            # TODO: Update when some version of Python is compiled with VC2017.
-            if name == 'avx512' and sys.version_info <= (9999, ):
-                return False
-            else:
-                return True
 
         cwd = os.getcwd()
         with tempfile.TemporaryDirectory() as tmpdir:

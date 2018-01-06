@@ -42,7 +42,12 @@
 
 #define SIMD_LEVEL_H FN_AVX2
 #include "FastNoiseSIMD_internal.h"
-#include <immintrin.h> //AVX2 FMA3
+#ifdef _WIN32
+#include <intrin.h>
+// ARM not relevant for AVX2
+#else // 'nix
+#include <x86intrin.h>
+#endif
 
 #define SIMD_LEVEL FN_AVX2
 #include "FastNoiseSIMD_internal.cpp"
