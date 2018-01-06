@@ -72,24 +72,40 @@ if os.name == 'nt':
             '/arch:AVX2',
         ]
     }
-    # /arch:SSE2 doesn't exist on Windows x64, and generates a needless 
-    # warning.
-    sse41 = {
-        'sources': [
-            'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse41.cpp'
-        ],
-        'cflags': [
-            '/arch:SSE2',
-        ],
-    }
-    sse2 = {
-        'sources': [
-            'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse2.cpp'
-        ],
-        'cflags': [
-            '/arch:SSE2',
-        ],
-    }
+
+    if platform.machine() == 'AMD64': # 64-bit windows
+        #`/arch:SSE2` doesn't exist on Windows x64 builds, and generates a needless warnings
+        sse41 = {
+            'sources': [
+                'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse41.cpp'
+            ],
+            'cflags': [
+            ],
+        }
+        sse2 = {
+            'sources': [
+                'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse2.cpp'
+            ],
+            'cflags': [
+            ],
+        }
+    else: # 32-bit Windows
+        sse41 = {
+            'sources': [
+                'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse41.cpp'
+            ],
+            'cflags': [
+                '/arch:SSE2',
+            ],
+        }
+        sse2 = {
+            'sources': [
+                'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse2.cpp'
+            ],
+            'cflags': [
+                '/arch:SSE2',
+            ],
+        }
     fma_flags = None
 else:  # Linux
     extra_cflags = ['-std=c++11']
