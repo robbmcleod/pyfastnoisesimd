@@ -11,8 +11,8 @@ before_install:
   - free -m
   - df -h
   - ulimit -a
-  - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-5.4; fi
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-5.4" CC="gcc-5.4"; fi
+  - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-6.3; fi
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-6.3" CC="gcc-6.3"; fi
 # Force use of modern pip and setuptools
   - pip install --upgrade pip
   - pip install --upgrade setuptools
