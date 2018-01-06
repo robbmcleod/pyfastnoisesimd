@@ -2,9 +2,11 @@ sudo: true
 
 language: python
 
+# TODO: clang builds
 python:
   - 3.5
   - 3.6
+
 
 addons:
   apt:
@@ -19,23 +21,19 @@ before_install:
   - free -m
   - df -h
   - ulimit -a
-  # - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-6; fi
-  # - if [ "$CXX" = "g++" ]; then export CXX="g++-6" CC="gcc-6"; fi 
   # Force use of modern pip and setuptools
   - pip install --upgrade pip
   - pip install --upgrade setuptools
   - pip install -r requirements.txt --verbose
   - python -V
+  - python -c "import platform; print(platform.python_compiler())"
 
 install:
   - gcc-6 --version
   - gcc --version
-  # The TravisCI "Trusty" environments don't have $CC set
-  # - alias gcc=gcc-6
-  # - alias g++=g++-6
-  # - gcc --version
-  # - pip install . --verbose
+  # The TravisCI "Trusty" environments do not have a default $CC set
   - export CC="gcc-6" CXX="g++-6" 
+  # And pip does not respect $CC
   - python setup.py install
   
 

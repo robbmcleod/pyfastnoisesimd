@@ -57,7 +57,7 @@ http://pyfastnoisesimd.readthedocs.io
 Installation
 ------------
 
-`pyfastnoisesimd` is available on PyPI, and may be installed via `pip`:
+`pyfastnoisesimd` is available on PyPI, and may be installed via `pip`::
 
     pip install -v pyfastnoisesimd
 
@@ -72,8 +72,19 @@ support AVX512. Only Python 3.5/3.6 support AVX2 on Windows.
 
 On Linux or OSX, only a source distribution is provided and installation 
 requires `gcc` or `clang`. For AVX512 support with GCC, GCC7.2+ is required, lower 
-versions will compile with AVX2/SSE4.1/SSE2 support only. GCC earilier than
-4.7 disables AVX2 as well.
+versions will compile with AVX2/SSE4.1/SSE2 support only. GCC earlier than
+4.7 disables AVX2 as well. Note that `pip` does not respect the `$CC` environment
+variable, so to clone and build from source with `gcc-7`:
+
+    git clone https://github.com/robbmcleod/pyfastnoisesimd.git
+    alias gcc=gcc-7; alias g++=g++-7
+    pip install -v ./pyfastnoisesimd
+
+Installing GCC7.2 on Ubuntu (with `sudo` or as root)::
+
+    add-apt-repository ppa:ubuntu-toolchain-r/test
+    apt update
+    apt install gcc-7 g++-7
 
 Benchmarks
 ---------- 
