@@ -20,7 +20,7 @@ before_install:
   - df -h
   - ulimit -a
   # - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-6; fi
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-6" CC="gcc-6"; fi 
+  # - if [ "$CXX" = "g++" ]; then export CXX="g++-6" CC="gcc-6"; fi 
   # Force use of modern pip and setuptools
   - pip install --upgrade pip
   - pip install --upgrade setuptools
@@ -31,10 +31,13 @@ install:
   - gcc-6 --version
   - gcc --version
   # The TravisCI "Trusty" environments don't have $CC set
-  - alias gcc=gcc-6
-  - alias g++=g++-6
-  - gcc --version
-  - pip install . --verbose
+  # - alias gcc=gcc-6
+  # - alias g++=g++-6
+  # - gcc --version
+  # - pip install . --verbose
+  - export CC="gcc-6" CXX="g++-6" 
+  - python setup.py install
+  
 
 script:
   - mkdir empty
