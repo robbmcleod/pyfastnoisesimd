@@ -476,13 +476,16 @@ def _chunk_noise_grid(fns, chunk, chunkStart, chunkAxis):
     For use by ``concurrent.futures`` to multi-thread ``Noise.genAsGrid()`` calls.
     '''
     dataPtr = chunk.__array_interface__['data'][0]
-    # print( 'pointer: {}, start: {}, axis{}'.format(chunk, chunkStart, chunkAxis) )
+    # print( 'pointer: {:X}, start: {}, shape: {}'.format(dataPtr, chunkStart, chunk.shape) )
     if chunkAxis == 0:
-        fns.FillNoiseSet(dataPtr, chunkStart, 0, 0, *chunk.shape)
+        # fns.FillNoiseSet(dataPtr, chunkStart, 0, 0, *chunk.shape)
+        fns.FillNoiseSet(chunk, chunkStart, 0, 0, *chunk.shape)
     elif chunkAxis == 1:
-        fns.FillNoiseSet(dataPtr, 0, chunkStart, 0, *chunk.shape)
+        # fns.FillNoiseSet(dataPtr, 0, chunkStart, 0, *chunk.shape)
+        fns.FillNoiseSet(chunk, chunkStart, 0, 0, *chunk.shape)
     else:
-        fns.FillNoiseSet(dataPtr, 0, 0, chunkStart, *chunk.shape)
+        # fns.FillNoiseSet(dataPtr, 0, 0, chunkStart, *chunk.shape)
+        fns.FillNoiseSet(chunk, 0, 0, chunkStart, *chunk.shape)
 
 class Noise(object):
     '''
@@ -718,15 +721,13 @@ class Noise(object):
         size = shape[1]
         if size%simdLen != 0:
             raise ValueError('coord.shape[1] must be evenly divisible by the SIMD instruction length: {}'.format(simdLen))
-        
+        if coords.dtype != 'float32':
+            raise ValueError('coords must be of dtype `np.float32`')
         # coords = np.require(coords, dtype='float32', requirements=['C', 'A'])
+
         noise = ext.EmptySet( size )
-        noisePtr = noise.__array_interface__['data'][0]
-        zPtr = coords.__array_interface__['data'][0]
-        yPtr = zPtr + 4*size
-        xPtr = yPtr + 4*size
         if self._asyncExecutor._max_workers <= 1:
-            self._fns.NoiseFromCoords(noisePtr, zPtr, yPtr, xPtr, size, 0)
+            self._fns.NoiseFromCoords(noise, coords, size, 0)
             return noise
 
         simdBlocks = size // simdLen
@@ -740,16 +741,15 @@ class Noise(object):
             workers.append( 
                 self._asyncExecutor.submit(
                     self._fns.NoiseFromCoords, 
-                    noisePtr, zPtr, yPtr, xPtr, chunkLen, I*chunkLen ))
+                    noise, coords, chunkLen, I*chunkLen ))
       
         # Last worker takes any odd simdBlocks to the end of the array
         lastChunkLen = size - (numWorkers-1)*chunkLen
         I += 1
-        
         workers.append( 
             self._asyncExecutor.submit(
                 self._fns.NoiseFromCoords,
-                noisePtr, zPtr, yPtr, xPtr, lastChunkLen, I*chunkLen ))
+                noise, coords, lastChunkLen, I*chunkLen ))
 
         for peon in workers:
             peon.result()

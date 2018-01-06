@@ -562,22 +562,19 @@ static PyObject *
 PyFNS_FillNoiseSet(FNSObject *self, PyObject *args)
 {
     // Fill an existing empty array, used for multi-threaded operation
-    // PyObject* noiseObj;
+    PyObject* noiseObj;
     float* noisePtr;
-    long long noisePtr_val;
     int xStart, yStart, zStart;
     int dims[3] = {0, 0, 0};
     float scaleMod = 1.0;
-    const char *format = "Liiiiii|f";
+    const char *format = "Oiiiiii|f";
 
-    if (!PyArg_ParseTuple(args, format, &noisePtr_val, &zStart, &yStart, &xStart, &dims[0], &dims[1], &dims[2], &scaleMod))
+    if (!PyArg_ParseTuple(args, format, &noiseObj, &zStart, &yStart, &xStart, &dims[0], &dims[1], &dims[2], &scaleMod))
     {
         return NULL;
     }
-    noisePtr = (float *)noisePtr_val;
-    // noisePtr = (float *)PyArray_GETPTR3((PyArrayObject *)noiseObj, 0, 0, 0);
+    noisePtr = (float *)PyArray_DATA((PyArrayObject *)noiseObj);
 
-    
     Py_BEGIN_ALLOW_THREADS // Release GIL
     self->fns->FillNoiseSet( noisePtr, zStart, yStart, xStart, dims[0], dims[1], dims[2], scaleMod );
     Py_END_ALLOW_THREADS
@@ -591,30 +588,28 @@ PyDoc_STRVAR(NoiseFromCoords__doc__,
 static PyObject *
 PyFNS_NoiseFromCoords(FNSObject *self, PyObject *args)
 {
+    PyObject *noiseObj, *coordsObj;
     FastNoiseVectorSet vector;
     int size, offset;
-    float *noisePtr, *xPtr, *yPtr, *zPtr;
-    long long noisePtr_val, xPtr_val, yPtr_val, zPtr_val;
+    float *noisePtr;
+    const char *format = "OOii";
 
-    if (!PyArg_ParseTuple(args, "LLLLii", &noisePtr_val, &zPtr_val, &yPtr_val, &xPtr_val, &size, &offset))
+    // if (!PyArg_ParseTuple(args, format, &noisePtr_val, &zPtr_val, &yPtr_val, &xPtr_val, &size, &offset))
+    if (!PyArg_ParseTuple(args, format, &noiseObj, &coordsObj, &size, &offset))
     {
         return NULL;
     }
-    noisePtr = (float *)noisePtr_val;
-    xPtr = (float *)xPtr_val;
-    yPtr = (float *)yPtr_val;
-    zPtr = (float *)zPtr_val;
-
-    Py_BEGIN_ALLOW_THREADS // Release GIL
-    vector.size = size;
+    noisePtr = (float *)PyArray_GETPTR1((PyArrayObject *)noiseObj, offset);
 
     // Typical thing here, Numpy is [Z,Y,X], whereas PyFastNoiseSIMD is [X,Y,Z]
     // but it makes no difference in the result, as long as we obey C-ordering
-    vector.xSet = &zPtr[offset];
-    vector.ySet = &yPtr[offset];
-    vector.zSet = &xPtr[offset];
+    vector.xSet = (float *)PyArray_GETPTR2((PyArrayObject *)coordsObj, 0, offset);
+    vector.ySet = (float *)PyArray_GETPTR2((PyArrayObject *)coordsObj, 1, offset);
+    vector.zSet = (float *)PyArray_GETPTR2((PyArrayObject *)coordsObj, 2, offset);
 
-    self->fns->FillNoiseSet(&noisePtr[offset], &vector, 0.0f, 0.0f, 0.0f);
+    Py_BEGIN_ALLOW_THREADS // Release GIL
+    vector.size = size;
+    self->fns->FillNoiseSet(noisePtr, &vector, 0.0f, 0.0f, 0.0f);
     Py_END_ALLOW_THREADS
 
     Py_RETURN_NONE;

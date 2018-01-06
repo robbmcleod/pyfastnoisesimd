@@ -29,8 +29,8 @@ from numpy import get_include
 
 # pyfastnoisesimd version
 major_ver = 0
-minor_ver = 2
-nano_ver = 2
+minor_ver = 3
+nano_ver = 1
 
 branch = ''
 
@@ -72,6 +72,8 @@ if os.name == 'nt':
             '/arch:AVX2',
         ]
     }
+    # /arch:SSE2 doesn't exist on Windows x64, and generates a needless 
+    # warning.
     sse41 = {
         'sources': [
             'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_sse41.cpp'

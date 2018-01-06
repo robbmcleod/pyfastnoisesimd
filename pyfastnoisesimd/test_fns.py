@@ -13,7 +13,10 @@ import unittest
 from logging import Logger
 log = Logger(__name__)
 
-X = 32
+# X is block size.
+# For AVX512, if we want to have 4 workers we should have at least 16 x 4 
+# blocks.
+X = 64
         
 class FNS_Tests(unittest.TestCase):
     
@@ -97,11 +100,11 @@ class FNS_Tests(unittest.TestCase):
         noise = fns.Noise(seed=None, numWorkers=numWorkers)
         coords = fns.emptyCoords(X)
         coords[0,:] = np.arange(X)
-        coords[1,:] = np.arange(-16,16)
+        coords[1,:] = np.arange(-X//2, X//2)
         coords[2,:] = np.linspace(-1.0, 1.0, X)
         noise.genFromCoords(coords)
 
-        # Re-use coords to make sure the array isn't accidently free'd 
+        # Re-use coords to make sure the array isn't accidentally free'd 
         # in FastNoiseSIMD
         noise2 = fns.Noise(seed=None, numWorkers=numWorkers)
         noise2.genFromCoords(coords)
