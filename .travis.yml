@@ -6,22 +6,29 @@ python:
   - 3.5
   - 3.6
 
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-6
+      - gcc-6
+
 before_install:
   - uname -a
   - free -m
   - df -h
   - ulimit -a
-  - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-6; fi
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-6" CC="gcc-6"; fi
-  - echo g++-6 --version
-# Force use of modern pip and setuptools
+  # - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-6; fi
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-6" CC="gcc-6"; fi 
+  # Force use of modern pip and setuptools
   - pip install --upgrade pip
   - pip install --upgrade setuptools
   - pip install -r requirements.txt --verbose
   - python -V
 
-
 install:
+  - gcc-6 --version
   - pip install . --verbose
 
 script:
