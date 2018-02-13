@@ -20,6 +20,40 @@ vectorized instruction set used. The number of threads, defaults to the number
 of virtual cores on the system. The ideal number of threads is typically the 
 number of physical cores, irrespective of Intel Hyperthreading®.
 
+Installation
+------------
+
+`pyfastnoisesimd` is available on PyPI, and may be installed via `pip`::
+
+    pip install --upgrade pip
+    pip install --upgrade setuptools
+    pip install -v pyfastnoisesimd
+
+On Windows, a wheel is provided for Python 3.6 only. Building from source or 
+compiling the extension for 3.5 will require either MS Visual Studio 2015 or 
+MSVC2015 Build Tools:
+
+http://landinghub.visualstudio.com/visual-cpp-build-tools
+
+No Python versions compile with MSVC2017 yet, which is the newest version to 
+support AVX512. Only Python 3.5/3.6 support AVX2 on Windows.
+
+On Linux or OSX, only a source distribution is provided and installation 
+requires `gcc` or `clang`. For AVX512 support with GCC, GCC7.2+ is required, lower 
+versions will compile with AVX2/SSE4.1/SSE2 support only. GCC earlier than
+4.7 disables AVX2 as well. Note that `pip` does not respect the `$CC` environment
+variable, so to clone and build from source with `gcc-7`:
+
+    git clone https://github.com/robbmcleod/pyfastnoisesimd.git
+    alias gcc=gcc-7; alias g++=g++-7
+    pip install -v ./pyfastnoisesimd
+
+Installing GCC7.2 on Ubuntu (with `sudo` or as root)::
+
+    add-apt-repository ppa:ubuntu-toolchain-r/test
+    apt update
+    apt install gcc-7 g++-7
+
 Benchmarks
 ----------
 

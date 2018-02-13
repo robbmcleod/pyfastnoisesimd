@@ -26,12 +26,12 @@ from distutils.sysconfig import customize_compiler
 from setuptools import Extension
 from setuptools import setup
 from glob import glob
-from numpy import get_include
+
 
 # pyfastnoisesimd version
 major_ver = 0
 minor_ver = 3
-nano_ver = 1
+nano_ver = 2
 
 branch = ''
 
@@ -47,13 +47,25 @@ sources = [
     'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_neon.cpp',
     'pyfastnoisesimd/wrapper.cpp'
 ]
-inc_dirs = [get_include(), 'pyfastnoisesimd', 'pyfastnoisesimd/fastnoisesimd/']
+
+# For (some versions of) `pip`, the first command run is `python setup.py egg_info` 
+# which crashes if `numpy` is not present, so we protect it here.
+try:
+    from numpy import get_include
+    inc_dirs = [get_include(), 'pyfastnoisesimd', 'pyfastnoisesimd/fastnoisesimd/']
+except (ImportError, ModuleNotFoundError):
+    print('WARNING: NumPy not installed, it is required for compilation.')
+    inc_dirs = ['pyfastnoisesimd', 'pyfastnoisesimd/fastnoisesimd/']
+
 lib_dirs = []
 libs = []
 def_macros = []
 
 with open('README.rst') as fh:
     long_desc = fh.read()
+
+with open('requirements.txt') as fh:
+    install_requires = [line.strip('\n') for line in fh.readlines()]
 
 if os.name == 'nt':
     extra_cflags = []
@@ -306,6 +318,7 @@ setup(name = "pyfastnoisesimd",
       platforms = ['any'],
       libraries = clibs,
       cmdclass = {'build': build},
+      install_requires=install_requires,
       ext_modules = [
         Extension( "pyfastnoisesimd.extension",
                    include_dirs=inc_dirs,
