@@ -59,6 +59,9 @@ Installation
 
 `pyfastnoisesimd` is available on PyPI, and may be installed via `pip`::
 
+    pip install --upgrade pip
+    pip install --upgrade setuptools
+    pip install -r requirements.txt -v
     pip install -v pyfastnoisesimd
 
 On Windows, a wheel is provided for Python 3.6 only. Building from source or 
