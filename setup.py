@@ -53,7 +53,7 @@ sources = [
 try:
     from numpy import get_include
     inc_dirs = [get_include(), 'pyfastnoisesimd', 'pyfastnoisesimd/fastnoisesimd/']
-except (ImportError, ModuleNotFoundError):
+except ImportError:
     print('WARNING: NumPy not installed, it is required for compilation.')
     inc_dirs = ['pyfastnoisesimd', 'pyfastnoisesimd/fastnoisesimd/']
 
