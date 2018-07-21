@@ -44,7 +44,6 @@ open('pyfastnoisesimd/version.py', 'w').write('__version__ = "%s"\n' % VERSION)
 sources = [
     'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD.cpp',
     'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_internal.cpp',
-    'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_neon.cpp',
     'pyfastnoisesimd/wrapper.cpp'
 ]
 inc_dirs = [get_include(), 'pyfastnoisesimd', 'pyfastnoisesimd/fastnoisesimd/']
@@ -72,6 +71,14 @@ if os.name == 'nt':
         'cflags': [
             '/arch:AVX2',
         ]
+    }
+    neon = {
+        'sources': [
+            'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_neon.cpp',
+        ],
+        'cflags': [
+            '/Oi',
+        ],
     }
 
     if platform.machine() == 'AMD64': # 64-bit windows
@@ -146,6 +153,19 @@ else:  # Linux
             '-msse2',
         ],
     }
+    neon = {
+        'sources': [
+            'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_neon.cpp',
+        ],
+        'cflags': [
+            '-std=c++11',
+            '-mfpu=neon',
+        ],
+    }
+    if platform.machine() == 'aarch64':
+        # Flag is not supported, but NEON is always available.
+        neon['cflags'].remove('-mfpu=neon')
+
     fma_flags = ['-mfma']
 
 clibs = [
@@ -153,6 +173,7 @@ clibs = [
     ('avx2', avx2),
     ('sse41', sse41),
     ('sse2', sse2),
+    ('neon', neon),
 ]
 
 
@@ -162,6 +183,7 @@ class build(_build):
         ('with-avx2=', None, 'Use AVX2 instructions: auto|yes|no'),
         ('with-sse41=', None, 'Use SSE4.1 instructions: auto|yes|no'),
         ('with-sse2=', None, 'Use SSE2 instructions: auto|yes|no'),
+        ('with-neon=', None, 'Use NEON instructions: auto|yes|no'),
         ('with-fma=', None, 'Use FMA instructions: auto|yes|no'),
     ]
 
@@ -171,6 +193,7 @@ class build(_build):
         self.with_avx2 = 'auto'
         self.with_sse41 = 'auto'
         self.with_sse2 = 'auto'
+        self.with_neon = 'auto'
         self.with_fma = 'auto'
 
     def finalize_options(self):
@@ -207,6 +230,8 @@ class build(_build):
                 disabled_libraries.append('avx512')
             if msc_version < 1900:
                 disabled_libraries.append('avx2')
+            if not platform.machine().startswith('arm'):
+                disabled_libraries.append('neon')
         # End of SIMD limits
 
         for name, lib in self.distribution.libraries:
