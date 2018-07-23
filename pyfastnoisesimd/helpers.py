@@ -2,8 +2,7 @@ import pyfastnoisesimd.extension as ext
 import concurrent.futures as cf
 import numpy as np
 from enum import Enum
-# from pyfastnoisesimd.cpuinfo import get_cpu_info
-# cpu_info = get_cpu_info()
+
 
 def num_virtual_cores() -> int:
     '''
@@ -496,8 +495,8 @@ class Noise(object):
         seed: The random number (int32) that seeds the random-number generator
             If ``seed == None`` a random integer is generated as the seed.
         numWorkers: The number of threads used for parallel noise generation. 
-            If ``numWorkers == None`` the number of virtual cores found by 
-            ``cpuinfo.py`` is used.
+            If ``numWorkers == None``, the default applied by
+            `concurrent.futures.ThreadPoolExecutor` is used.
     '''
 
     def __init__(self, seed: int=None, numWorkers: int=None):
