@@ -93,7 +93,7 @@ PyFNS_GetEmptySet(PyObject *self, PyObject *args)
 {
     // Make a NumPy array and return it. Note the array is empty, not zeroed.
     npy_intp dims[3] = {0, 0, 0};
-    const char *format = "i|ii";
+    const char *format = "n|nn";
     float *data;
 
     if (!PyArg_ParseTuple(args, format, &dims[0], &dims[1], &dims[2])) {
@@ -538,7 +538,7 @@ PyFNS_GetNoiseSet(FNSObject *self, PyObject *args)
     int xStart, yStart, zStart;
     npy_intp dims[3] = {0, 0, 0};
     float scaleMod = 1.0;
-    const char *format = "iiiiii|f";
+    const char *format = "iiinnn|f";
     float *data = NULL;
 
     if (!PyArg_ParseTuple(args, format, &zStart, &yStart, &xStart, &dims[0], &dims[1], &dims[2], &scaleMod))
