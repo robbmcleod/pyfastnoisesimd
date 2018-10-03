@@ -3,6 +3,7 @@ import concurrent.futures as cf
 import numpy as np
 from enum import Enum
 
+_MIN_CHUNK_SIZE = 4096
 
 def num_virtual_cores() -> int:
     '''
@@ -470,21 +471,18 @@ class PerturbClass(object):
         self._normaliseLength = float(new)
         return self._fns.SetPerturbNormaliseLength(float(new))
 
-def _chunk_noise_grid(fns, chunk, chunkStart, chunkAxis):
+def _chunk_noise_grid(fns, chunk, chunkStart, chunkAxis, start=[0,0,0]):
     '''
     For use by ``concurrent.futures`` to multi-thread ``Noise.genAsGrid()`` calls.
     '''
     dataPtr = chunk.__array_interface__['data'][0]
     # print( 'pointer: {:X}, start: {}, shape: {}'.format(dataPtr, chunkStart, chunk.shape) )
     if chunkAxis == 0:
-        # fns.FillNoiseSet(dataPtr, chunkStart, 0, 0, *chunk.shape)
-        fns.FillNoiseSet(chunk, chunkStart, 0, 0, *chunk.shape)
+        fns.FillNoiseSet(chunk, chunkStart+start[0], start[1], start[2], *chunk.shape)
     elif chunkAxis == 1:
-        # fns.FillNoiseSet(dataPtr, 0, chunkStart, 0, *chunk.shape)
-        fns.FillNoiseSet(chunk, chunkStart, 0, 0, *chunk.shape)
+        fns.FillNoiseSet(chunk, start[0], chunkStart+start[1], start[2], *chunk.shape)
     else:
-        # fns.FillNoiseSet(dataPtr, 0, 0, chunkStart, *chunk.shape)
-        fns.FillNoiseSet(chunk, 0, 0, chunkStart, *chunk.shape)
+        fns.FillNoiseSet(chunk, start[0], start[1], chunkStart+start[2], *chunk.shape)
 
 class Noise(object):
     '''
@@ -645,12 +643,15 @@ class Noise(object):
             result = noise.genFromGrid(shape=[256,256,256], start=[0,0,0])
             nextResult = noise.genFromGrid(shape=[256,256,256], start=[256,0,0])
         '''
-        if self._asyncExecutor._max_workers <= 1:
-            return self._fns.GetNoiseSet( *start, *shape )
+        # TODO: should be a minimum array size before we bother to turn on 
+        # futures.
+        size = np.product(shape)
+        if self._asyncExecutor._max_workers <= 1 or size < _MIN_CHUNK_SIZE:
+            return self._fns.GetNoiseSet(*start, *shape)
 
         # else run in threaded mode.
         # Create a full shape empty array
-        noise = ext.EmptySet( *shape )
+        noise = ext.EmptySet(*shape)
         # It would be nice to be able to split both on Z and Y if needed...
         if shape[0] > 1:
             chunkAxis = 0
@@ -659,16 +660,21 @@ class Noise(object):
         else:
             chunkAxis = 2
 
-        numChunks = np.minimum( self._asyncExecutor._max_workers, shape[chunkAxis] ) 
+        
+        numChunks = np.minimum(self._asyncExecutor._max_workers, shape[chunkAxis]) 
+        print(numChunks)
 
-        chunkedNoise = np.array_split( noise, numChunks, axis=chunkAxis )
-        chunkIndices = [ start[0] for start in np.array_split( np.arange(shape[chunkAxis]), numChunks )]
+        chunkedNoise = np.array_split(noise, numChunks, axis=chunkAxis)
+        chunkIndices = [pos[0] for pos in np.array_split(np.arange(shape[chunkAxis]), numChunks )]
 
         workers = []
-        for I, (chunk, chunkIndex) in enumerate( zip(chunkedNoise,chunkIndices) ):
+        for I, (chunk, chunkIndex) in enumerate(zip(chunkedNoise,chunkIndices)):
             if chunk.shape == 0: # Empty array indicates we have more threads than chunks
                 continue
-            workers.append( self._asyncExecutor.submit( _chunk_noise_grid, self._fns, chunk, chunkIndex, chunkAxis ) )
+            print(f'chunkIndex = {chunkIndex}, chunkAxis = {chunkAxis}, start = {start}')
+            workers.append( 
+                self._asyncExecutor.submit(_chunk_noise_grid, 
+                    self._fns, chunk, chunkIndex, chunkAxis, start))
 
         for peon in workers:
             peon.result()
@@ -740,7 +746,7 @@ class Noise(object):
             workers.append( 
                 self._asyncExecutor.submit(
                     self._fns.NoiseFromCoords, 
-                    noise, coords, chunkLen, I*chunkLen ))
+                    noise, coords, chunkLen, I*chunkLen))
       
         # Last worker takes any odd simdBlocks to the end of the array
         lastChunkLen = size - (numWorkers-1)*chunkLen
@@ -748,7 +754,7 @@ class Noise(object):
         workers.append( 
             self._asyncExecutor.submit(
                 self._fns.NoiseFromCoords,
-                noise, coords, lastChunkLen, I*chunkLen ))
+                noise, coords, lastChunkLen, I*chunkLen))
 
         for peon in workers:
             peon.result()
