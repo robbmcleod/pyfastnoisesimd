@@ -766,6 +766,7 @@ class Noise(object):
 ######### DEPRECATED `kitchen-sink` interface #########
 #######################################################
 
+"""
 _factory = ext.FNS()
 _factoryExecutor = cf.ThreadPoolExecutor( max_workers = 1 )
 def setNumWorkers( N_workers ):
@@ -860,3 +861,4 @@ def _chunked_gen( chunk, chunkStart, chunkAxis ):
         _factory.FillNoiseSet( pointer, 0, chunkStart, 0, *chunk.shape )
     else:
         _factory.FillNoiseSet( pointer, 0, 0, chunkStart, *chunk.shape )
+"""
