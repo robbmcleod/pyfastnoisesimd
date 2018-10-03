@@ -662,7 +662,6 @@ class Noise(object):
 
         
         numChunks = np.minimum(self._asyncExecutor._max_workers, shape[chunkAxis]) 
-        print(numChunks)
 
         chunkedNoise = np.array_split(noise, numChunks, axis=chunkAxis)
         chunkIndices = [pos[0] for pos in np.array_split(np.arange(shape[chunkAxis]), numChunks )]
@@ -671,7 +670,6 @@ class Noise(object):
         for I, (chunk, chunkIndex) in enumerate(zip(chunkedNoise,chunkIndices)):
             if chunk.shape == 0: # Empty array indicates we have more threads than chunks
                 continue
-            print(f'chunkIndex = {chunkIndex}, chunkAxis = {chunkAxis}, start = {start}')
             workers.append( 
                 self._asyncExecutor.submit(_chunk_noise_grid, 
                     self._fns, chunk, chunkIndex, chunkAxis, start))
