@@ -13,7 +13,6 @@ from pyfastnoisesimd.version import __version__
 
 from pyfastnoisesimd.helpers import (
     Noise, emptyCoords, num_virtual_cores,
-    generate, setNumWorkers, 
     NoiseType, FractalType, PerturbType, 
     CellularReturnType, CellularDistanceFunction)
 
