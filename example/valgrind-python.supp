@@ -23,6 +23,31 @@
 }
 
 {
+   ADDRESS_IN_RANGE/Invalid read of size 8
+   Memcheck:Addr8
+   fun:address_in_range
+}
+
+{
+   ADDRESS_IN_RANGE/Invalid read of size 8
+   Memcheck:Value8
+   fun:address_in_range
+}
+
+{
+   ADDRESS_IN_RANGE/Conditional
+   Memcheck:Cond
+   fun:address_in_range
+}
+
+{
+    malloc/_PyObject_Alloc/Leak
+    Memcheck:Leak
+    fun:malloc
+    fun:_PyObject_Alloc
+}
+
+{
    ADDRESS_IN_RANGE/Invalid read of size 4
    Memcheck:Value4
    fun:Py_ADDRESS_IN_RANGE

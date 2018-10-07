@@ -540,7 +540,6 @@ class Noise(object):
             raise ValueError('numWorkers must be greater than 0')
         # if self._asyncExecutor._max_workers == N_workers:
         #     return
-
         self._asyncExecutor = cf.ThreadPoolExecutor(max_workers = N_workers)
 
     @property
@@ -676,6 +675,9 @@ class Noise(object):
 
         for peon in workers:
             peon.result()
+        # For memory management we have to tell NumPy it's ok to free the memory
+        # region when it is dereferenced.
+        self._fns._OwnSplitArray(noise)
         return noise
 
     def genFromCoords(self, coords: np.ndarray) -> np.ndarray:

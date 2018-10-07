@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <algorithm>
 #include <cstdint>
+#include <cstdlib>  // For std::aligned_alloc
 
 
 
@@ -238,7 +239,9 @@ void FastNoiseSIMD::FreeNoiseSet(float* floatArray)
 
 	if (s_currentSIMDLevel > FN_NO_SIMD_FALLBACK)
 #ifdef _WIN32
-		_aligned_free(floatArray);
+		// TODO: NumPy calls `free` which segfaults on Windows.
+		// _aligned_free(floatArray);
+		free(floatArray);
 #else
 		free(floatArray);
 #endif

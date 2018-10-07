@@ -95,23 +95,33 @@ PyFNS_GetEmptySet(PyObject *self, PyObject *args)
     npy_intp dims[3] = {0, 0, 0};
     const char *format = "n|nn";
     float *data;
+    PyObject *noiseArray;
 
     if (!PyArg_ParseTuple(args, format, &dims[0], &dims[1], &dims[2])) {
         return NULL;
     }
 
+    printf("Empty 0\n"); fflush(NULL);
     if ((dims[1] > 0) && (dims[2] > 0)) { // 3D
         // Py_BEGIN_ALLOW_THREADS // Release GIL
         data = FastNoiseSIMD::GetEmptySet((int)dims[0], (int)dims[1], (int)dims[2]);
         // Py_END_ALLOW_THREADS
-        return PyArray_SimpleNewFromData(3, dims, NPY_FLOAT32, data);
+        noiseArray = PyArray_SimpleNewFromData(3, dims, NPY_FLOAT32, data);
     }
     else { // Single argument, make a 1D array
         // Py_BEGIN_ALLOW_THREADS // Release GIL
         data = FastNoiseSIMD::GetEmptySet((int)dims[0]);
         // Py_END_ALLOW_THREADS
-        return PyArray_SimpleNewFromData(1, dims, NPY_FLOAT32, data);
+        noiseArray = PyArray_SimpleNewFromData(1, dims, NPY_FLOAT32, data);
     }
+    printf("Empty 1\n"); fflush(NULL);
+    // Py_XDECREF(noiseArray);
+    // Py_XINCREF(noiseArray);
+    PyArray_ENABLEFLAGS((PyArrayObject *)noiseArray, NPY_ARRAY_OWNDATA);
+    // PyArray_UpdateFlags((PyArrayObject *)noiseArray, 
+    //         NPY_ARRAY_ALIGNED|NPY_ARRAY_CARRAY|NPY_ARRAY_OWNDATA);
+    printf("Empty 2\n"); fflush(NULL);
+    return noiseArray;
 }
 
 PyDoc_STRVAR(AlignedSize__doc__,
@@ -540,6 +550,7 @@ PyFNS_GetNoiseSet(FNSObject *self, PyObject *args)
     float scaleMod = 1.0;
     const char *format = "iiinnn|f";
     float *data = NULL;
+    PyObject *noiseArray;
 
     if (!PyArg_ParseTuple(args, format, &zStart, &yStart, &xStart, &dims[0], &dims[1], &dims[2], &scaleMod))
     {
@@ -547,10 +558,12 @@ PyFNS_GetNoiseSet(FNSObject *self, PyObject *args)
     }
 
     Py_BEGIN_ALLOW_THREADS // Release GIL
-    data = self->fns->GetNoiseSet( zStart, yStart, xStart, (int)dims[0], (int)dims[1], (int)dims[2], scaleMod );
+    data = self->fns->GetNoiseSet(zStart, yStart, xStart, (int)dims[0], (int)dims[1], (int)dims[2], scaleMod);
     Py_END_ALLOW_THREADS
-    
-    return PyArray_SimpleNewFromData(3, dims, NPY_FLOAT32, data);
+
+    noiseArray = PyArray_SimpleNewFromData(3, dims, NPY_FLOAT32, data);
+    PyArray_ENABLEFLAGS((PyArrayObject *)noiseArray, NPY_ARRAY_OWNDATA);
+    return noiseArray;
 }
 
 // void FastNoiseSIMD::FillNoiseSet(float* noiseSet, int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier)
@@ -615,6 +628,23 @@ PyFNS_NoiseFromCoords(FNSObject *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
+PyDoc_STRVAR(OwnSplitArray__doc__,
+    "_OwnSplitArray(numpy.ndarray noise, numpy.ndarray coords)\
+-- Take ownership of memory region of a split numpy array. \n");
+static PyObject *
+PyFNS_OwnSplitArray(FNSObject *self, PyObject *args)
+{
+    PyObject* splitArray;
+    const char *format = "O";
+
+    if (!PyArg_ParseTuple(args, format, &splitArray))
+    {
+        return NULL;
+    }
+    PyArray_ENABLEFLAGS((PyArrayObject *)splitArray, NPY_ARRAY_OWNDATA);
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef FNS_methods[] = {
     {"GetSIMDLevel", (PyCFunction)PyFNS_GetSIMDLevel, METH_VARARGS, GetSIMDLevel__doc__},
     {"GetSeed", (PyCFunction)PyFNS_GetSeed, METH_VARARGS, GetSeed__doc__},
@@ -642,6 +672,7 @@ static PyMethodDef FNS_methods[] = {
     {"GetNoiseSet", (PyCFunction)PyFNS_GetNoiseSet, METH_VARARGS, GetNoiseSet__doc__},
     {"FillNoiseSet", (PyCFunction)PyFNS_FillNoiseSet, METH_VARARGS, FillNoiseSet__doc__},
     {"NoiseFromCoords", (PyCFunction)PyFNS_NoiseFromCoords, METH_VARARGS, NoiseFromCoords__doc__},
+    {"_OwnSplitArray", (PyCFunction)PyFNS_OwnSplitArray, METH_VARARGS, OwnSplitArray__doc__},
     {NULL, NULL, 0, NULL},
 };
 
