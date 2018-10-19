@@ -239,9 +239,7 @@ void FastNoiseSIMD::FreeNoiseSet(float* floatArray)
 
 	if (s_currentSIMDLevel > FN_NO_SIMD_FALLBACK)
 #ifdef _WIN32
-		// TODO: NumPy calls `free` which segfaults on Windows.
-		// _aligned_free(floatArray);
-		free(floatArray);
+		_aligned_free(floatArray);
 #else
 		free(floatArray);
 #endif

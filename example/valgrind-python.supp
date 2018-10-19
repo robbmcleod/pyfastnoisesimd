@@ -22,23 +22,23 @@
    fun:Py_ADDRESS_IN_RANGE
 }
 
+# NEW Py3.6 SUPPRESSIONS
 {
    ADDRESS_IN_RANGE/Invalid read of size 8
    Memcheck:Addr8
    fun:address_in_range
 }
-
 {
    ADDRESS_IN_RANGE/Invalid read of size 8
    Memcheck:Value8
    fun:address_in_range
 }
-
 {
    ADDRESS_IN_RANGE/Conditional
    Memcheck:Cond
    fun:address_in_range
 }
+# END NEW Py3.6 SUPPRESSIONS
 
 {
     malloc/_PyObject_Alloc/Leak

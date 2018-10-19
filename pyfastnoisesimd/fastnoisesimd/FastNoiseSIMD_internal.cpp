@@ -111,10 +111,9 @@ typedef int SIMDi;
 // Memory Allocation
 #if SIMD_LEVEL > FN_NO_SIMD_FALLBACK && defined(FN_ALIGNED_SETS)
 	#ifdef _WIN32
-		// #define SIMD_ALLOCATE_SET(floatP, floatCount) floatP = (float *)std::aligned_alloc(MEMORY_ALIGNMENT, (floatCount)*sizeof(float))
-		//#define SIMD_ALLOCATE_SET(floatP, floatCount) floatP = (float*)_aligned_malloc((floatCount)* sizeof(float), MEMORY_ALIGNMENT)
+		#define SIMD_ALLOCATE_SET(floatP, floatCount) floatP = (float*)_aligned_malloc((floatCount)* sizeof(float), MEMORY_ALIGNMENT)
 		// FIXME: don't have a data structure that can generate aligned data on Win32
-		#define SIMD_ALLOCATE_SET(floatP, floatCount) floatP = new float[floatCount]
+		// #define SIMD_ALLOCATE_SET(floatP, floatCount) floatP = new float[floatCount]
 	#else
 		#define SIMD_ALLOCATE_SET(floatP, floatCount) posix_memalign((void**)&floatP, MEMORY_ALIGNMENT, (floatCount)* sizeof(float))
 	#endif

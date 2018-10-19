@@ -136,6 +136,13 @@ Generated noise from 2666000 coordinates with 4 workers in 6.161e-03 s
 Release Notes
 -------------
 
+**0.3.2**
+
+* Disabled aligned memory allocation on Windows, due to it causing seg-faults.
+* Thanks to Luke H-W for finding and fixing a memory leak in `genAsGrid`.
+* Thanks to Enderlook for reporting that the `start` parameter was not working 
+  in multi-threading mode for calls to `genAsGrid`.
+
 **0.3.1**
 
 * Changes to calling convention to avoid pointer size confusion between 64- and 

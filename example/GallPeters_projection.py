@@ -13,7 +13,6 @@ import numpy.testing as npt
 # It is somewhat better behaved numerically than the classic Mercator projection.
 # https://en.wikipedia.org/wiki/Mercator_projection
 
-
 N_thread = fns.num_virtual_cores()
 
 freq = 0.1
@@ -41,21 +40,29 @@ plt.title( 'meridian and parallel sampling space')
 '''
 
 # Make your Noise object
-bumps = fns.Noise(seed=42, numWorkers=N_thread)
+bumps = fns.Noise(seed=42)
 bumps.noiseType = fns.NoiseType.Perlin
 bumps.frequency = freq
 print( 'FastNoiseSIMD maximum supported SIMD instruction level: {}'.format(bumps.SIMDLevel) )
 
 # Generate an empty-array of 3D cartesian coordinates. You can use NumPy
 # arrays from other sources but see the warnings in `Noise.genFromCoords()`
-coords = fns.emptyCoords(meridian.size)
+# coords = fns.emptyCoords(meridian.size)
+coords = fns.AlignedArray((3, meridian.size))
+print('== coords.shape: ', coords.shape)
+print('== parallel.shape: ', parallel.shape)
+
 
 # Fill coords with Cartesian coordinates in 3D
 # (Note that normally zenith starts at 0.0 rad, whereas we want the equator to be 
 # 0.0 rad, so we swap cos/sin for the `parallel` axis)
-coords[0,:meridian.size] = radius*np.sin(parallel)                   # Z
-coords[1,:meridian.size] = radius*np.cos(parallel)*np.sin(meridian)  # Y
-coords[2,:meridian.size] = radius*np.cos(parallel)*np.cos(meridian)  # X
+print('z')
+coords[0,:] = radius*np.sin(parallel)                   # Z
+print('y')
+STOP
+coords[1,:] = radius*np.cos(parallel)*np.sin(meridian)  # Y
+print('x')
+coords[2,:] = radius*np.cos(parallel)*np.cos(meridian)  # X
 
 # Check that we have spherical coordinates as expected:
 '''
@@ -68,6 +75,7 @@ ax.set_zlabel('Z')
 ax.set_title('3D coordinate sampling')
 '''
 
+print('--== Run with 1 thread ==--')
 bumps.numWorkers = 1
 t2 = perf_counter()
 result = bumps.genFromCoords(coords)
@@ -76,7 +84,8 @@ print('#### Single threaded mode ####')
 print('Generated noise from {} coordinates with {} workers in {:.3e} s'.format(meridian.size, 1, t3-t2))
 print('    {:.1f} ns/pixel'.format(1e9*(t3-t2)/result.size))
 
-bumps.numWorkers = N_thread
+bumps.numWorkers = fns.num_virtual_cores()
+print('--== Run with {} threads ==--'.format(fns.num_virtual_cores()))
 t4 = perf_counter()
 result = bumps.genFromCoords(coords)
 t5 = perf_counter()

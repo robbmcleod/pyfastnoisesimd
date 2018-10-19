@@ -86,6 +86,7 @@ FNS_init(FNSObject *self, PyObject *args, PyObject *kwargs)
 // use the conventional (z,y,x) notation.  I.e. the z-axis is the slowest
 // changing axis, and adjacent x-axis elements are adjacent in memory.
 
+/*
 PyDoc_STRVAR(GetEmptySet__doc__,
              "GetEmptySet(int size) -- Create an empty (aligned) noise set for use with FillNoiseSet().\n");
 static PyObject *
@@ -93,36 +94,65 @@ PyFNS_GetEmptySet(PyObject *self, PyObject *args)
 {
     // Make a NumPy array and return it. Note the array is empty, not zeroed.
     npy_intp dims[3] = {0, 0, 0};
+    int ndim;
     const char *format = "n|nn";
     float *data;
+    npy_intp size;
     PyObject *noiseArray;
 
     if (!PyArg_ParseTuple(args, format, &dims[0], &dims[1], &dims[2])) {
         return NULL;
     }
 
-    printf("Empty 0\n"); fflush(NULL);
-    if ((dims[1] > 0) && (dims[2] > 0)) { // 3D
-        // Py_BEGIN_ALLOW_THREADS // Release GIL
-        data = FastNoiseSIMD::GetEmptySet((int)dims[0], (int)dims[1], (int)dims[2]);
-        // Py_END_ALLOW_THREADS
-        noiseArray = PyArray_SimpleNewFromData(3, dims, NPY_FLOAT32, data);
+    // If any of the dims is zero, that dimension should not be present.
+    // This can be the minor-most dimension `dims[2]` first and then `dims[1]`.
+    // printf("Empty set got dims: %d, %d, %d\n", dims[0], dims[1], dims[2]);
+    if (dims[1] == 0) {        // 1D
+        ndim = 1;
+        size = dims[0];
+    } else if (dims[2] == 0) { // 2D 
+        ndim = 2;
+        size = dims[0] * dims[1];
+    } else {                   // 3D
+        ndim = 3;
+        size = dims[0] * dims[1] * dims[2];
     }
-    else { // Single argument, make a 1D array
-        // Py_BEGIN_ALLOW_THREADS // Release GIL
-        data = FastNoiseSIMD::GetEmptySet((int)dims[0]);
-        // Py_END_ALLOW_THREADS
-        noiseArray = PyArray_SimpleNewFromData(1, dims, NPY_FLOAT32, data);
-    }
-    printf("Empty 1\n"); fflush(NULL);
-    // Py_XDECREF(noiseArray);
-    // Py_XINCREF(noiseArray);
-    PyArray_ENABLEFLAGS((PyArrayObject *)noiseArray, NPY_ARRAY_OWNDATA);
-    // PyArray_UpdateFlags((PyArrayObject *)noiseArray, 
-    //         NPY_ARRAY_ALIGNED|NPY_ARRAY_CARRAY|NPY_ARRAY_OWNDATA);
-    printf("Empty 2\n"); fflush(NULL);
+    npy_intp aligned_size = FastNoiseSIMD::AlignedSize(size);
+    printf("EmptySet for size: %d, aligned_size: %d\n", size, aligned_size);
+
+    data = FastNoiseSIMD::GetEmptySet((int)size);
+    printf("Alloc EmptySet @%p\n", data); fflush(NULL);
+    noiseArray = PyArray_SimpleNewFromData(ndim, dims, NPY_FLOAT32, data);
+    // As `AlignedArray` calls FreeNoiseSet we do _not_ set this array to 
+    // own its data. In any case, the length of data can be longer than what 
+    // NumPy thinks it is.
+    // PyArray_ENABLEFLAGS((PyArrayObject *)noiseArray, NPY_ARRAY_OWNDATA);
     return noiseArray;
 }
+*/
+
+/*
+PyDoc_STRVAR(FreeNoiseSet__doc__,
+             "FreeNoiseSet(AlignedArray noiseArray) -- Frees memory allocated with aligned_alloc or platform specific methods.\n");
+static PyObject *
+PyFNS_FreeNoiseSet(PyObject *self, PyObject *args)
+{
+    // Free the previously allocated aligned memory region.
+    npy_intp dims[3] = {0, 0, 0};
+    const char *format = "O";
+    float *data;
+    PyObject *noiseArray;
+
+    if (!PyArg_ParseTuple(args, format, &noiseArray)) {
+        return NULL;
+    }
+
+    data = (float *)PyArray_DATA((PyArrayObject *)noiseArray);
+    printf("Free noise set @%p\n", data); fflush(NULL);
+    FastNoiseSIMD::FreeNoiseSet(data);
+    Py_RETURN_NONE;
+}
+*/
 
 PyDoc_STRVAR(AlignedSize__doc__,
              "AlignedSize(int size) -- Rounds the size up to the nearest aligned size for the current SIMD level.\n");
@@ -537,6 +567,7 @@ PyFNS_SetPerturbNormaliseLength(FNSObject *self, PyObject *args)
 // The vector set we would have to create a custom object for
 // static FastNoiseVectorSet* GetVectorSet(int xSize, int ySize, int zSize);
 
+/*
 // float* GetNoiseSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
 PyDoc_STRVAR(GetNoiseSet__doc__,
              "GetNoiseSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f)\
@@ -565,9 +596,9 @@ PyFNS_GetNoiseSet(FNSObject *self, PyObject *args)
     PyArray_ENABLEFLAGS((PyArrayObject *)noiseArray, NPY_ARRAY_OWNDATA);
     return noiseArray;
 }
+*/
 
 // void FastNoiseSIMD::FillNoiseSet(float* noiseSet, int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier)
-// float* GetNoiseSet(int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier = 1.0f);
 PyDoc_STRVAR(FillNoiseSet__doc__,
     "FillNoiseSet(float* noiseSet, int xStart, int yStart, int zStart, int xSize, int ySize, int zSize, float scaleModifier)\
 -- Fill a noise set.\n");
@@ -586,6 +617,7 @@ PyFNS_FillNoiseSet(FNSObject *self, PyObject *args)
     {
         return NULL;
     }
+
     noisePtr = (float *)PyArray_DATA((PyArrayObject *)noiseObj);
 
     Py_BEGIN_ALLOW_THREADS // Release GIL
@@ -601,26 +633,41 @@ PyDoc_STRVAR(NoiseFromCoords__doc__,
 static PyObject *
 PyFNS_NoiseFromCoords(FNSObject *self, PyObject *args)
 {
-    PyObject *noiseObj, *coordsObj;
+    PyObject *noiseObj;
+    PyObject *zObj, *yObj, *xObj;
     FastNoiseVectorSet vector;
-    int size, offset;
+    npy_intp size, offset;
     float *noisePtr;
-    const char *format = "OOii";
+    const char *format = "OOOOnn";
 
-    // if (!PyArg_ParseTuple(args, format, &noisePtr_val, &zPtr_val, &yPtr_val, &xPtr_val, &size, &offset))
-    if (!PyArg_ParseTuple(args, format, &noiseObj, &coordsObj, &size, &offset))
+    if (!PyArg_ParseTuple(args, format, &noiseObj, &xObj, &yObj, &zObj, &size, &offset)) 
     {
         return NULL;
     }
+    printf("    NoiseFromCoords got size %d and offset %d\n", size, offset);
+    
     noisePtr = (float *)PyArray_GETPTR1((PyArrayObject *)noiseObj, offset);
 
     // Typical thing here, Numpy is [Z,Y,X], whereas PyFastNoiseSIMD is [X,Y,Z]
     // but it makes no difference in the result, as long as we obey C-ordering
-    vector.xSet = (float *)PyArray_GETPTR2((PyArrayObject *)coordsObj, 0, offset);
-    vector.ySet = (float *)PyArray_GETPTR2((PyArrayObject *)coordsObj, 1, offset);
-    vector.zSet = (float *)PyArray_GETPTR2((PyArrayObject *)coordsObj, 2, offset);
+    vector.xSet = (float *)PyArray_GETPTR1((PyArrayObject *)xObj, offset);
+    vector.ySet = (float *)PyArray_GETPTR1((PyArrayObject *)yObj, offset);
+    vector.zSet = (float *)PyArray_GETPTR1((PyArrayObject *)zObj, offset);
+
+    /*
+    printf("    Vector points to %p, %p, %p\n", vector.xSet, vector.ySet, vector.zSet);
+    // Remember that incrementing a float* increments by sizeof(float)
+    printf("    Vector end at    %p, %p, %p\n", vector.xSet + size, 
+                                                vector.ySet + size, 
+                                                vector.zSet + size);
+    printf("    Vector alignment error: %d, %d, %d\n", 
+                (npy_intp)vector.xSet % 8,
+                (npy_intp)vector.ySet % 8,
+                (npy_intp)vector.zSet % 8);
+    */
 
     Py_BEGIN_ALLOW_THREADS // Release GIL
+
     vector.size = size;
     self->fns->FillNoiseSet(noisePtr, &vector, 0.0f, 0.0f, 0.0f);
     Py_END_ALLOW_THREADS
@@ -669,7 +716,7 @@ static PyMethodDef FNS_methods[] = {
     {"SetPerturbFractalLacunarity", (PyCFunction)PyFNS_SetPerturbFractalLacunarity, METH_VARARGS, SetPerturbFractalLacunarity__doc__},
     {"SetPerturbFractalGain", (PyCFunction)PyFNS_SetPerturbFractalGain, METH_VARARGS, SetPerturbFractalGain__doc__},
     {"SetPerturbNormaliseLength", (PyCFunction)PyFNS_SetPerturbNormaliseLength, METH_VARARGS, SetPerturbNormaliseLength__doc__},
-    {"GetNoiseSet", (PyCFunction)PyFNS_GetNoiseSet, METH_VARARGS, GetNoiseSet__doc__},
+    // {"GetNoiseSet", (PyCFunction)PyFNS_GetNoiseSet, METH_VARARGS, GetNoiseSet__doc__},
     {"FillNoiseSet", (PyCFunction)PyFNS_FillNoiseSet, METH_VARARGS, FillNoiseSet__doc__},
     {"NoiseFromCoords", (PyCFunction)PyFNS_NoiseFromCoords, METH_VARARGS, NoiseFromCoords__doc__},
     {"_OwnSplitArray", (PyCFunction)PyFNS_OwnSplitArray, METH_VARARGS, OwnSplitArray__doc__},
@@ -719,8 +766,9 @@ PyTypeObject FNSType = {
 
 static PyMethodDef module_methods[] =
     {
-        {"EmptySet", (PyCFunction)PyFNS_GetEmptySet, METH_VARARGS, GetEmptySet__doc__},
+        //{"EmptySet", (PyCFunction)PyFNS_GetEmptySet, METH_VARARGS, GetEmptySet__doc__},
         {"AlignedSize", (PyCFunction)PyFNS_AlignedSize, METH_VARARGS, AlignedSize__doc__},
+        //{"FreeSet", (PyCFunction)PyFNS_FreeNoiseSet, METH_VARARGS, FreeNoiseSet__doc__},
 
         {NULL, NULL},
 };
