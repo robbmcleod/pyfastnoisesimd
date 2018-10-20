@@ -54,16 +54,10 @@ def orthoProject(noise, tile2: int=512, p0: float=0., l0: float=0.) -> np.ndarra
     alphaStar = l0 + np.arctan2(xMasked, conjMuStar) 
     sqrtM1MuStar2 = np.sqrt(one - muStar*muStar)
 
-    coords = fns.AlignedArray((3,maskLen)) # ask fastnoisesimd for a properly-shaped array
-    print('coords shape: ', coords.shape)
-    print('w')
+    coords = fns.empty_aligned((3,maskLen)) # ask fastnoisesimd for a properly-shaped array
     coords[0,:] = muStar                             # W
-    print('v')
     test = sqrtM1MuStar2 * np.sin(alphaStar)  # V
-    STOP
-    print('dunno')
     coords[1,:] = test
-    print('u')
     coords[2,:] = sqrtM1MuStar2 * np.cos(alphaStar)  # U
 
     # Check our coordinates in 3-D to make sure the shape is correct:

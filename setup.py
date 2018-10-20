@@ -45,7 +45,7 @@ sources = [
     'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD.cpp',
     'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_internal.cpp',
     'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_neon.cpp',
-    'pyfastnoisesimd/wrapper.cpp'
+    'pyfastnoisesimd/wrapper.cpp',
 ]
 
 # For (some versions of) `pip`, the first command run is `python setup.py egg_info` 

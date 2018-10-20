@@ -4,58 +4,67 @@ import numpy as np
 from enum import Enum
 
 _MIN_CHUNK_SIZE = 4096
-# from pyfastnoisesimd.aligned_array import _MIN_CHUNK_SIZE, AlignedArray
 
 
-def emptyAligned(shape): 
+def empty_aligned(shape, dtype=np.float32, n_byte=ext.SIMD_ALIGNMENT):
     """
-    For high performance PyFastNoiseSIMD's backing library requires data that 
-    is exactly aligned in memory address to the SIMD vector instruction length.
-    So the starting address of the memory needs to be exactly divisible by 
-    the SIMD vector size.
+    Provides an memory-aligned array for use with SIMD accelerated instructions.
+    Should be used to build 
+
+    Adapted from: https://github.com/hgomersall/pyFFTW/blob/master/pyfftw/utils.pxi
 
     Args:
-        shape: a sequence of len 1-3 with the desired array dimensions.
-    Returns:
-        Returns a `numpy.ndarray` of dtype `np.float32` that is aligned to the 
-        current SIMD level.
+        shape: a sequence (typically a tuple) of array axes.
+        dtype: NumPy data type of the underlying array. Note FastNoiseSIMD supports 
+               only `np.float32`. Seg faults may occur if this is changed.
+        n_byte: byte alignment. Should always use the `pyfastnoisesimd.extension.SIMD_ALIGNMENT`
+                value or seg faults may occur.
     """
+    dtype = np.dtype(dtype)
+    itemsize = dtype.itemsize
 
-    # Make the 
+    if not isinstance(shape, (int, np.integer)):
+        array_length = 1
+        for each_dimension in shape:
+            array_length *= each_dimension
+    else:
+        array_length = shape
 
-    n_elements = np.product(shape)
-    n_bytes = n_elements * 4
+    # Allocate a new array that will contain the aligned data
+    buffer = np.empty(array_length * itemsize + n_byte, dtype='int8')
 
-    simd_len = ext.AlignedSize(1)
+    offset = (n_byte - buffer.ctypes.data) % n_byte
+    aligned = buffer[offset:offset-n_byte].view(dtype).reshape(shape)
+    return aligned
 
-    array = np.empty(n_bytes + simd_len, dtype=np.uint8)
-
-    array_start = hex(array.ctypes.data)
-    array_end = hex(array.ctypes.data + n_bytes)
-    print(f'Total allocated range: {array_start} to {array_end}')
-
-    align_error = array.ctypes.data % simd_len
-    offset = 0 if align_error == 0 else (simd_len - align_error)
-    
-    # Is there a problem here because we convert to float32 early?
-    # Do we need to reshape first?
-    view = array[offset: offset + n_bytes].reshape(byte_shape).view(np.float32)
-    return view
-    
-def emptyCoords(length: int) -> np.ndarray:
+def full_aligned(shape, fill, dtype=np.float32, n_byte=ext.SIMD_ALIGNMENT):
     """
-    Generate an empty array of suitable for use with ``Noise.genFromCoords()``.
-    
+    As per `empty_aligned`, but returns an array initialized to a constant value.
+
     Args:
-        length: number of coordinates for use in `Noise.genFromCoords()`.
+        shape: a sequence (typically a tuple) of array axes.
+        fill: the value to fill each array element with.
+        dtype: NumPy data type of the underlying array. Note FastNoiseSIMD supports 
+               only `np.float32`. Seg faults may occur if this is changed.
+        n_byte: byte alignment. Should always use the `pyfastnoisesimd.extension.SIMD_ALIGNMENT`
+                value or seg faults may occur.
+    """
+    aligned = empty_aligned(shape, dtype=dtype, n_byte=n_byte)
+    aligned.fill(fill)
+    return aligned
+
+def check_alignment(array):
+    """
+    Verifies that an array is aligned correctly for the supported SIMD level.
+
+    Args:
+        array: a `numpy.ndarray` to check.
 
     Returns:
-        A SIMD-level aligned ``numpy.ndarray`` of shape ``(3, length)``.
+        truth: bool
     """
-    simd_len = ext.AlignedSize(1)
-    extended_len = int(np.ceil(length/simd_len)) * simd_len
-    empty = emptyAligned((3, length))
-    return empty[:,:length]
+    return ((ext.SIMD_ALIGNMENT - array.ctypes.data) % ext.SIMD_ALIGNMENT) == 0
+
 
 def num_virtual_cores():
     """
@@ -580,22 +589,6 @@ class Noise(object):
         self._num_workers = N_workers
         self._asyncExecutor = cf.ThreadPoolExecutor(max_workers = N_workers)
 
-    @property
-    def SIMDLevel(self) -> str:
-        """
-        A text string identifying the SIMD level ``FastNoiseSIMD`` was 
-        compiled with.
-        """
-        levels = {
-            5: 'ARM NEON',
-            4: 'AVX512',
-            3: 'AVX2 & FMA3',
-            2: 'SSE4.1',
-            1: 'SSE2',
-            0: 'Fallback, no SIMD support'
-        }
-        return levels[self._fns.GetSIMDLevel()]
-
     @property 
     def seed(self) -> int:
         """
@@ -680,12 +673,16 @@ class Noise(object):
             result = noise.genFromGrid(shape=[256,256,256], start=[0,0,0])
             nextResult = noise.genFromGrid(shape=[256,256,256], start=[256,0,0])
         """
+        if isinstance(shape, (int, np.integer)):
+            shape = (shape,)
+
         # There is a minimum array size before we bother to turn on futures.
         size = np.product(shape)
-        noise = emptyAligned(shape)
+        noise = empty_aligned(shape)
 
         if self._num_workers <= 1 or size < _MIN_CHUNK_SIZE:
-            return self._fns.FillNoiseSet(noise, *start, *shape)
+            self._fns.FillNoiseSet(noise, *start, *shape)
+            return noise
 
         # else run in threaded mode.
         # Create a full shape empty array
@@ -696,9 +693,9 @@ class Noise(object):
             chunkAxis = 1
         else:
             chunkAxis = 2
-
         
         numChunks = np.minimum(self._asyncExecutor._max_workers, shape[chunkAxis]) 
+        print(f'genAsGrid using {numChunks} chunks')
 
         chunkedNoise = np.array_split(noise, numChunks, axis=chunkAxis)
         chunkIndices = [pos[0] for pos in np.array_split(np.arange(shape[chunkAxis]), numChunks )]
@@ -709,7 +706,7 @@ class Noise(object):
                 continue
             workers.append( 
                 self._asyncExecutor.submit(_chunk_noise_grid, 
-                    self._fns, chunk, chunkIndex, chunkAxis, start))
+                        self._fns, chunk, chunkIndex, chunkAxis, start))
 
         for peon in workers:
             peon.result()
@@ -735,7 +732,7 @@ class Noise(object):
             import numpy as np
             import pyfastnoisesimd as fns 
             numCoords = 256
-            coords = fns.emptyCoords(numCoords)
+            coords = fns.empty_aligned((3,numCoords))
             # <Set the coordinate values, it is a (3, numCoords) array
             coords[0,:] = np.linspace(-np.pi, np.pi, numCoords)
             coords[1,:] = np.linspace(-1.0, 1.0, numCoords)
@@ -743,12 +740,6 @@ class Noise(object):
             noise = fns.Noise()
             result = noise.genFromCoords(coords)
 
-        .. warning: ``coords`` Must be C-ordered, of shape (3,N) where N is evenly 
-                divisible by the SIMD instruction length (``N%SIMD_len == 0``).
-                It's recommended to use ``pyfastnoisesimd.emptyCoords(N)`` to 
-                generate this array. Alternatively use ``numpy.require()``. 
-                Failure to observe these restrictions can lead to segmentation 
-                faults.
         """
 
         if not isinstance(coords, np.ndarray):
@@ -760,15 +751,15 @@ class Noise(object):
             raise ValueError('coords.shape[0] must equal 3')
 
         length = shape[1]
-        if coords.dtype != 'float32':
+        if coords.dtype != np.float32:
             raise ValueError('coords must be of dtype `np.float32`')
 
-        noise = emptyAligned(length)
+        noise = empty_aligned(length)
         if self._num_workers <= 1:
             self._fns.NoiseFromCoords(noise, coords, length, 0)
             return noise
 
-        simdLen = ext.AlignedSize(1)
+        simdLen = ext.SIMD_ALIGNMENT
         simdBlocks = length // simdLen
         numWorkers = np.minimum(self._num_workers, simdBlocks)
 
@@ -778,9 +769,8 @@ class Noise(object):
         workers = []
         for I in range(numWorkers-1):
             workers.append( 
-                self._asyncExecutor.submit(
-                    self._fns.NoiseFromCoords, 
-                    noise, coords, chunkLen, I*chunkLen))
+                self._asyncExecutor.submit( self._fns.NoiseFromCoords, 
+                            noise, coords, chunkLen, I*chunkLen))
       
         # Last worker takes any odd simdBlocks to the end of the array
         lastChunkLen = length - (numWorkers-1)*chunkLen
@@ -789,112 +779,10 @@ class Noise(object):
             self._asyncExecutor.submit(
                 self._fns.NoiseFromCoords,
                 noise, coords, lastChunkLen, I*chunkLen))
-        print("Results")
+
+
         for peon in workers:
             peon.result()
-        print("Owning")
-        self._fns._OwnSplitArray(noise)
+
         return noise
         
-
-
-#######################################################
-######### DEPRECATED `kitchen-sink` interface #########
-#######################################################
-
-"""
-_factory = ext.FNS()
-_factoryExecutor = cf.ThreadPoolExecutor( max_workers = 1 )
-def setNumWorkers( N_workers ):
-    '''
-    **DEPRECATED**
-
-    Sets the maximum number of thread workers that will be used for generating
-    noise.
-    '''
-    N_workers = int( N_workers )
-    if N_workers <= 0:
-        raise ValueError('N_workers must be greater than 0')
-    if _factoryExecutor._max_workers == N_workers:
-        return
-
-    _factoryExecutor._max_workers = N_workers
-    _factoryExecutor._adjust_thread_count()
-
-def generate( size=[1,1024,1024], start=[0,0,0],
-              seed=42, freq=0.01, noiseType='Simplex', axesScales=[1.0,1.0,1.0], 
-              fracType='FBM', fracOctaves=4, 
-              fracLacunarity=2.0, fracGain=0.5, 
-              cellReturnType='Distance', cellDistFunc='Euclidean',
-              cellNoiseLookup='Simplex', cellNoiseLookupFreq=0.2, 
-              cellDist2Ind=[0,1], cellJitter=0.2,
-              perturbType=None, perturbAmp=1.0, perturbFreq=0.5, perturbOctaves=3,
-              perturbLacunarity=2.0, perturbGain=0.5, perturbNormLen=1.0,   ):
-    '''
-    **DEPRECATED**
-
-    Generates noise using a factory.
-    '''
-    print( 'generate() is deprecated, please use Noise() class.' )
-    _factory.SetSeed( seed )
-    _factory.SetFrequency( freq )
-    _factory.SetNoiseType( ext.noiseType[noiseType] )
-    _factory.SetAxesScales( axesScales[0], axesScales[1], axesScales[2] )
-    _factory.SetFractalOctaves( fracOctaves )
-    _factory.SetFractalLacunarity( fracLacunarity )
-    _factory.SetFractalGain( fracGain )
-    _factory.SetFractalType( ext.fractalType[fracType] )
-    _factory.SetCellularReturnType( ext.cellularReturnType[cellReturnType] )
-    _factory.SetCellularDistanceFunction( ext.cellularDistanceFunction[cellDistFunc]  )
-    _factory.SetCellularNoiseLookupType( ext.noiseType[cellNoiseLookup] )
-    _factory.SetCellularNoiseLookupFrequency( cellNoiseLookupFreq )
-    _factory.SetCellularDistance2Indices( *cellDist2Ind  )
-    _factory.SetCellularJitter( cellJitter )
-    _factory.SetPerturbType( ext.perturbType[perturbType] )
-    _factory.SetPerturbAmp( perturbAmp )
-    _factory.SetPerturbFrequency( perturbFreq )
-    _factory.SetPerturbFractalOctaves( perturbOctaves )
-    _factory.SetPerturbFractalLacunarity( perturbLacunarity )
-    _factory.SetPerturbFractalGain( perturbGain )
-    _factory.SetPerturbNormaliseLength( perturbNormLen )
-
-    if _factoryExecutor._max_workers <= 1:
-        return _factory.GetNoiseSet( *start, *size )
-
-    # else run in threaded mode.
-    # Create a full size empty array
-    noise = ext.EmptySet( *size )
-    # It would be nice to be able to split both on Z and Y if needed...
-    if size[0] > 1:
-        chunkAxis = 0
-    elif size[1] > 1:
-        chunkAxis = 1
-    else:
-        chunkAxis = 2
-
-    numChunks = np.minimum( _factoryExecutor._max_workers, size[chunkAxis] )
-
-    chunkedNoise = np.array_split( noise, numChunks, axis=chunkAxis )
-    chunkIndices = [ start[0] for start in np.array_split( np.arange(size[chunkAxis]), numChunks )]
-
-    workers = []
-    for I, (chunk, chunkIndex) in enumerate( zip(chunkedNoise,chunkIndices) ):
-        if chunk.size == 0: # Empty array indicates we have more threads than chunks
-            continue
-        
-        workers.append( _factoryExecutor.submit( _chunked_gen, chunk, chunkIndex, chunkAxis ) )
-
-    for peon in workers:
-        peon.result()
-    return noise
-
-def _chunked_gen( chunk, chunkStart, chunkAxis ):
-    pointer = chunk.__array_interface__['data'][0]
-    # print( 'pointer: {}, start: {}, axis{}'.format(chunk, chunkStart, chunkAxis) )
-    if chunkAxis == 0:
-        _factory.FillNoiseSet( pointer, chunkStart, 0, 0, *chunk.shape )
-    elif chunkAxis == 1:
-        _factory.FillNoiseSet( pointer, 0, chunkStart, 0, *chunk.shape )
-    else:
-        _factory.FillNoiseSet( pointer, 0, 0, chunkStart, *chunk.shape )
-"""

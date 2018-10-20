@@ -1,5 +1,5 @@
-#ifndef FASTNOISE_SIMD_WRAPPER_H
-#define FASTNOISE_SIMD_WRAPPER_H
+#ifndef FASTNOISE_SIMD_WRAPPER_CPP
+#define FASTNOISE_SIMD_WRAPPER_CPP
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
@@ -31,8 +31,6 @@
 
 
  */
-// extern PyTypeObject FNSType;
-// FastNoiseSIMD* gFNS = FastNoiseSIMD::NewFastNoiseSIMD( DEFAULT_SEED );
 
 // Factory object
 struct FNSObject
@@ -51,7 +49,6 @@ FNS_dealloc(FNSObject *self)
 static PyObject *
 FNS_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-
     FNSObject *self = (FNSObject *)type->tp_alloc(type, 0);
 
     if (self != NULL)
@@ -154,28 +151,6 @@ PyFNS_FreeNoiseSet(PyObject *self, PyObject *args)
 }
 */
 
-PyDoc_STRVAR(AlignedSize__doc__,
-             "AlignedSize(int size) -- Rounds the size up to the nearest aligned size for the current SIMD level.\n");
-static PyObject *
-PyFNS_AlignedSize(PyObject *self, PyObject *args)
-{
-    int size;
-    const char *format = "i";
-
-    if (!PyArg_ParseTuple(args, format, &size))
-    {
-        return NULL;
-    }
-    return Py_BuildValue("i", FastNoiseSIMD::AlignedSize(size));
-}
-
-PyDoc_STRVAR(GetSIMDLevel__doc__,
-             "int GetSIMDLevel() -- Returns maximum SIMD level supported found.\n");
-static PyObject *
-PyFNS_GetSIMDLevel(FNSObject *self, PyObject *args)
-{
-    return Py_BuildValue("i", self->fns->GetSIMDLevel());
-}
 
 PyDoc_STRVAR(GetSeed__doc__,
              "int GetSeed() -- Returns seed used for all noise types.\n");
@@ -621,7 +596,7 @@ PyFNS_FillNoiseSet(FNSObject *self, PyObject *args)
     noisePtr = (float *)PyArray_DATA((PyArrayObject *)noiseObj);
 
     Py_BEGIN_ALLOW_THREADS // Release GIL
-    self->fns->FillNoiseSet( noisePtr, zStart, yStart, xStart, dims[0], dims[1], dims[2], scaleMod );
+    self->fns->FillNoiseSet(noisePtr, zStart, yStart, xStart, dims[0], dims[1], dims[2], scaleMod);
     Py_END_ALLOW_THREADS
 
     Py_RETURN_NONE;
@@ -634,66 +609,33 @@ static PyObject *
 PyFNS_NoiseFromCoords(FNSObject *self, PyObject *args)
 {
     PyObject *noiseObj;
-    PyObject *zObj, *yObj, *xObj;
+    PyObject *coordsObj;
     FastNoiseVectorSet vector;
     npy_intp size, offset;
     float *noisePtr;
-    const char *format = "OOOOnn";
-
-    if (!PyArg_ParseTuple(args, format, &noiseObj, &xObj, &yObj, &zObj, &size, &offset)) 
+    const char *format = "OOnn";
+    // We pass in `size` so we can chunk arrays for multi-threaded operations.
+    if (!PyArg_ParseTuple(args, format, &noiseObj, &coordsObj, &size, &offset)) 
     {
         return NULL;
     }
-    printf("    NoiseFromCoords got size %d and offset %d\n", size, offset);
-    
     noisePtr = (float *)PyArray_GETPTR1((PyArrayObject *)noiseObj, offset);
 
-    // Typical thing here, Numpy is [Z,Y,X], whereas PyFastNoiseSIMD is [X,Y,Z]
+    // Typical confusion here, Numpy is [Z,Y,X], whereas PyFastNoiseSIMD is [X,Y,Z]
     // but it makes no difference in the result, as long as we obey C-ordering
-    vector.xSet = (float *)PyArray_GETPTR1((PyArrayObject *)xObj, offset);
-    vector.ySet = (float *)PyArray_GETPTR1((PyArrayObject *)yObj, offset);
-    vector.zSet = (float *)PyArray_GETPTR1((PyArrayObject *)zObj, offset);
-
-    /*
-    printf("    Vector points to %p, %p, %p\n", vector.xSet, vector.ySet, vector.zSet);
-    // Remember that incrementing a float* increments by sizeof(float)
-    printf("    Vector end at    %p, %p, %p\n", vector.xSet + size, 
-                                                vector.ySet + size, 
-                                                vector.zSet + size);
-    printf("    Vector alignment error: %d, %d, %d\n", 
-                (npy_intp)vector.xSet % 8,
-                (npy_intp)vector.ySet % 8,
-                (npy_intp)vector.zSet % 8);
-    */
+    vector.xSet = (float *)PyArray_GETPTR2((PyArrayObject *)coordsObj, 0, offset);
+    vector.ySet = (float *)PyArray_GETPTR2((PyArrayObject *)coordsObj, 1, offset);
+    vector.zSet = (float *)PyArray_GETPTR2((PyArrayObject *)coordsObj, 2, offset);
+    vector.size = (int)size;
 
     Py_BEGIN_ALLOW_THREADS // Release GIL
-
-    vector.size = size;
     self->fns->FillNoiseSet(noisePtr, &vector, 0.0f, 0.0f, 0.0f);
     Py_END_ALLOW_THREADS
 
     Py_RETURN_NONE;
 }
 
-PyDoc_STRVAR(OwnSplitArray__doc__,
-    "_OwnSplitArray(numpy.ndarray noise, numpy.ndarray coords)\
--- Take ownership of memory region of a split numpy array. \n");
-static PyObject *
-PyFNS_OwnSplitArray(FNSObject *self, PyObject *args)
-{
-    PyObject* splitArray;
-    const char *format = "O";
-
-    if (!PyArg_ParseTuple(args, format, &splitArray))
-    {
-        return NULL;
-    }
-    PyArray_ENABLEFLAGS((PyArrayObject *)splitArray, NPY_ARRAY_OWNDATA);
-    Py_RETURN_NONE;
-}
-
 static PyMethodDef FNS_methods[] = {
-    {"GetSIMDLevel", (PyCFunction)PyFNS_GetSIMDLevel, METH_VARARGS, GetSIMDLevel__doc__},
     {"GetSeed", (PyCFunction)PyFNS_GetSeed, METH_VARARGS, GetSeed__doc__},
     {"SetSeed", (PyCFunction)PyFNS_SetSeed, METH_VARARGS, SetSeed__doc__},
     {"SetFrequency", (PyCFunction)PyFNS_SetFrequency, METH_VARARGS, SetFrequency__doc__},
@@ -719,7 +661,6 @@ static PyMethodDef FNS_methods[] = {
     // {"GetNoiseSet", (PyCFunction)PyFNS_GetNoiseSet, METH_VARARGS, GetNoiseSet__doc__},
     {"FillNoiseSet", (PyCFunction)PyFNS_FillNoiseSet, METH_VARARGS, FillNoiseSet__doc__},
     {"NoiseFromCoords", (PyCFunction)PyFNS_NoiseFromCoords, METH_VARARGS, NoiseFromCoords__doc__},
-    {"_OwnSplitArray", (PyCFunction)PyFNS_OwnSplitArray, METH_VARARGS, OwnSplitArray__doc__},
     {NULL, NULL, 0, NULL},
 };
 
@@ -767,7 +708,7 @@ PyTypeObject FNSType = {
 static PyMethodDef module_methods[] =
     {
         //{"EmptySet", (PyCFunction)PyFNS_GetEmptySet, METH_VARARGS, GetEmptySet__doc__},
-        {"AlignedSize", (PyCFunction)PyFNS_AlignedSize, METH_VARARGS, AlignedSize__doc__},
+        //{"GetSIMDAlignment", (PyCFunction)PyFNS_GetSIMDAlignment, METH_VARARGS, GetSIMDAlignment__doc__},
         //{"FreeSet", (PyCFunction)PyFNS_FreeNoiseSet, METH_VARARGS, FreeNoiseSet__doc__},
 
         {NULL, NULL},
@@ -790,6 +731,7 @@ PyInit_extension(void)
 {
     PyObject *dictNoiseType, *dictFractalType, *dictPerturbType;
     PyObject *dictCellularDistanceFunction, *dictCellularReturnType;
+    
     // WARNING: PyType_Ready MUST be called to finalize new Python types before
     // a module is created. Official documentation is weak on this point.
     if (PyType_Ready(&FNSType) < 0)
@@ -865,13 +807,37 @@ PyInit_extension(void)
     PyDict_SetItem(dictCellularReturnType, Py_BuildValue("s", "Distance2Cave"), Py_BuildValue("i", FastNoiseSIMD::Distance2Cave));
     PyModule_AddObject(m, "cellularReturnType", dictCellularReturnType);
 
-    // Integer macros
-    //PyModule_AddIntMacro(m, N_THREADS);
-
-    // String macros
-    // PyModule_AddStringMacro(m, FNS_VERSION);
+    // Load SIMD level into module
+    FastNoiseSIMD *dummy = FastNoiseSIMD::NewFastNoiseSIMD(1);
+    int simd_level = dummy->GetSIMDLevel();
+    delete dummy;
+    switch(simd_level) {
+        case FN_SSE2:
+            PyModule_AddIntConstant(m, "SIMD_ALIGNMENT", 16);
+            PyModule_AddStringConstant(m, "SIMD_LEVEL", "SSE2");
+            break;
+        case FN_SSE41:
+            PyModule_AddIntConstant(m, "SIMD_ALIGNMENT", 16);
+            PyModule_AddStringConstant(m, "SIMD_LEVEL", "SSE4.1");
+            break;
+        case FN_AVX2:
+            PyModule_AddIntConstant(m, "SIMD_ALIGNMENT", 32);
+            PyModule_AddStringConstant(m, "SIMD_LEVEL", "AVX2");
+            break;
+        case FN_AVX512:
+            PyModule_AddIntConstant(m, "SIMD_ALIGNMENT", 64);
+            PyModule_AddStringConstant(m, "SIMD_LEVEL", "AVX512");
+            break;
+        case FN_NEON:
+            PyModule_AddIntConstant(m, "SIMD_ALIGNMENT", 16);
+            PyModule_AddStringConstant(m, "SIMD_LEVEL", "ARM NEON");
+            break;
+        default: // FN_NO_SIMD_FALLBACK
+            PyModule_AddIntConstant(m, "SIMD_ALIGNMENT", 2);
+            PyModule_AddStringConstant(m, "SIMD_LEVEL", "Fallback");
+    }
 
     return m;
 }
 
-#endif // FASTNOISE_SIMD_WRAPPER_H
+#endif // FASTNOISE_SIMD_WRAPPER_CPP

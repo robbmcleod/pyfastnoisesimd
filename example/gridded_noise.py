@@ -10,7 +10,7 @@ print( 'Array shape: {}'.format(shape) )
 
 # Plot cellular noise with a gradient perturbation
 cellular = fns.Noise(numWorkers=1)
-print( 'SIMD level supported: {}'.format(cellular.SIMDLevel))
+print( 'SIMD level supported: {}'.format(fns.extension.SIMD_LEVEL))
 # The Noise class uses properties to map to the FastNoiseSIMD library Set<...> functions
 cellular.seed = 42
 cellular.noiseType = fns.NoiseType.Cellular
@@ -76,8 +76,8 @@ print( '    {:.1f} ns/voxel'.format( 1E9*(t5-t4)/np.prod(shape) ) )
 print( '    {:.1f} % thread scaling'.format( (t2-t1)/(t5-t4)*100.0  ) )
 
 # Check that the results are the same from single and multi-threading
-npt.assert_array_almost_equal( cell_single, cell_multi )
-npt.assert_array_almost_equal( perlin_single, perlin_multi )
+npt.assert_array_almost_equal(cell_single, cell_multi)
+npt.assert_array_almost_equal(perlin_single, perlin_multi)
 
 # Simple plotting.  matplotlib can also make movies.
 '''

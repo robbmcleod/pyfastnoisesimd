@@ -43,12 +43,11 @@ plt.title( 'meridian and parallel sampling space')
 bumps = fns.Noise(seed=42)
 bumps.noiseType = fns.NoiseType.Perlin
 bumps.frequency = freq
-print( 'FastNoiseSIMD maximum supported SIMD instruction level: {}'.format(bumps.SIMDLevel) )
+print( 'FastNoiseSIMD maximum supported SIMD instruction level: {}'.format(fns.extension.SIMD_LEVEL) )
 
 # Generate an empty-array of 3D cartesian coordinates. You can use NumPy
 # arrays from other sources but see the warnings in `Noise.genFromCoords()`
-# coords = fns.emptyCoords(meridian.size)
-coords = fns.AlignedArray((3, meridian.size))
+coords = fns.empty_aligned((3, meridian.size))
 print('== coords.shape: ', coords.shape)
 print('== parallel.shape: ', parallel.shape)
 
@@ -56,12 +55,8 @@ print('== parallel.shape: ', parallel.shape)
 # Fill coords with Cartesian coordinates in 3D
 # (Note that normally zenith starts at 0.0 rad, whereas we want the equator to be 
 # 0.0 rad, so we swap cos/sin for the `parallel` axis)
-print('z')
 coords[0,:] = radius*np.sin(parallel)                   # Z
-print('y')
-STOP
 coords[1,:] = radius*np.cos(parallel)*np.sin(meridian)  # Y
-print('x')
 coords[2,:] = radius*np.cos(parallel)*np.cos(meridian)  # X
 
 # Check that we have spherical coordinates as expected:
