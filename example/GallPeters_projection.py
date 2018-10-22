@@ -55,9 +55,9 @@ print('== parallel.shape: ', parallel.shape)
 # Fill coords with Cartesian coordinates in 3D
 # (Note that normally zenith starts at 0.0 rad, whereas we want the equator to be 
 # 0.0 rad, so we swap cos/sin for the `parallel` axis)
-coords[0,:] = radius*np.sin(parallel)                   # Z
-coords[1,:] = radius*np.cos(parallel)*np.sin(meridian)  # Y
-coords[2,:] = radius*np.cos(parallel)*np.cos(meridian)  # X
+coords[0,:meridian.size] = radius*np.sin(parallel)                   # Z
+coords[1,:meridian.size] = radius*np.cos(parallel)*np.sin(meridian)  # Y
+coords[2,:meridian.size] = radius*np.cos(parallel)*np.cos(meridian)  # X
 
 # Check that we have spherical coordinates as expected:
 '''

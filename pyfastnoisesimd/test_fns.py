@@ -16,35 +16,80 @@ log = Logger(__name__)
 # X is block size.
 # For AVX512, if we want to have 4 workers we should have at least 16 x 4 
 # blocks.
-X = 64
-        
+CHUNK = fns.helpers._MIN_CHUNK_SIZE
+CHUNK2 = int(np.sqrt(CHUNK)) + 4
+CHUNK3 = int(np.cbrt(CHUNK)) + 2
+
 class FNS_Tests(unittest.TestCase):
     
     def setUp(self):
         pass
 
-    def grid(self, numWorkers):
+    def grid_3d(self, size=CHUNK3, numWorkers=1):
         noise = fns.Noise(seed=None, numWorkers=numWorkers)
-        
         noise.frequency = 0.15
         assert(noise.frequency == 0.15)
         noise.axesScales = [0.9, 0.85, 0.9]
         assert(noise.axesScales == [0.9, 0.85, 0.9])
 
+        result = noise.genAsGrid(shape=[size,size,size])
+        assert(result.shape == (size,size,size))
+
+
+    def grid_2d(self, size=CHUNK2, numWorkers=1):
+        noise = fns.Noise(seed=None, numWorkers=numWorkers)
+        # Test 2D
+        result = noise.genAsGrid(shape=[size,size])
+        assert(result.shape == (size,size))
+
+
+    def grid_1d(self, size=CHUNK, numWorkers=1):
+        # Test 1D
+        noise = fns.Noise(seed=None, numWorkers=numWorkers)
+        result = noise.genAsGrid(shape=size)
+        assert(result.shape == (size,))
+
+    def coords(self, size=CHUNK, numWorkers=1):
+        noise = fns.Noise(seed=None, numWorkers=numWorkers)
+        coords = fns.empty_coords(size)
+        coords[0,:] = np.arange(size)
+        coords[1,:] = np.arange(-size//2, size//2)
+        coords[2,:] = np.linspace(-1.0, 1.0, size)
+        noise.genFromCoords(coords)
+
+        # Re-use coords to make sure the array isn't accidentally free'd 
+        # in FastNoiseSIMD
+        noise2 = fns.Noise(seed=None, numWorkers=numWorkers)
+        noise2.genFromCoords(coords)
+        return
+
+    def test_grid_1thread(self):
+        self.grid_3d(size=CHUNK3, numWorkers=1)
+        self.grid_2d(size=CHUNK2, numWorkers=1)
+        self.grid_1d(size=CHUNK,  numWorkers=1)
+
+    def test_grid_4thread(self):
+        self.grid_3d(size=CHUNK3, numWorkers=4)
+        self.grid_2d(size=CHUNK2, numWorkers=4)
+        self.grid_1d(size=CHUNK,  numWorkers=4)
+
+    def test_coords_1(self):
+        self.coords(size=CHUNK, numWorkers=1)
+
+    def test_coords_4(self):
+        self.coords(size=CHUNK, numWorkers=1)
+
+    def test_noise_type(self, size=CHUNK, numWorkers=1):
+        noise = fns.Noise(seed=None, numWorkers=numWorkers)
         # Iterate through NoiseType
         for newNoise in fns.NoiseType:
             noise.noiseType = newNoise
             assert(noise.noiseType == newNoise)
-            result = noise.genAsGrid(shape=[X,X,X])
-            assert(result.shape == (X,X,X))
-        
-        # Test different dimensionalities
-        result = noise.genAsGrid(shape=[1,X,X])
-        assert(result.shape == (1,X,X) )
-        result = noise.genAsGrid(shape=[1,1,X])
-        assert(result.shape == (1,1,X))
+            result = noise.genAsGrid(shape=size)
 
+    def fractal(self, size=CHUNK, numWorkers=1):
         # Iterate through FractalType
+        noise = fns.Noise(seed=None, numWorkers=numWorkers)
         noise.fractal.octaves = 2
         assert(noise.fractal.octaves == 2)
         noise.fractal.lacunarity = 1.9
@@ -54,9 +99,11 @@ class FNS_Tests(unittest.TestCase):
         for newFractal in fns.FractalType:
             noise.fractal.fractalType = newFractal
             assert(noise.fractal.fractalType == newFractal)
-            noise.genAsGrid(shape=[1,1,X])
+            noise.genAsGrid(shape=size)
 
+    def test_perturb(self, size=CHUNK, numWorkers=1):
         # Iterate through PeturbType
+        noise = fns.Noise(seed=None, numWorkers=numWorkers)
         noise.perturb.amp = 1.1
         assert(noise.perturb.amp == 1.1)
         noise.perturb.frequency = 0.44
@@ -70,8 +117,10 @@ class FNS_Tests(unittest.TestCase):
         for newPeturb in fns.PerturbType:
             noise.perturb.perturbType = newPeturb
             assert(noise.perturb.perturbType == newPeturb)
-            noise.genAsGrid(shape=[1,1,X])
+            noise.genAsGrid(shape=size)
 
+    def test_cell(self, size=CHUNK, numWorkers=1):
+        noise = fns.Noise(seed=None, numWorkers=numWorkers)
         # Iterate through cellular options
         noise.cell.jitter = 0.7
         assert(noise.cell.jitter == 0.7)
@@ -84,43 +133,15 @@ class FNS_Tests(unittest.TestCase):
         for newNoise in fns.NoiseType:
             noise.cell.noiseLookupType = newNoise
             assert(noise.cell.noiseLookupType == newNoise)
-            noise.genAsGrid(shape=[1,1,X])
+            noise.genAsGrid(shape=size)
         for retType in fns.CellularReturnType:
             noise.cell.returnType = retType
             assert(noise.cell.returnType == retType)
-            noise.genAsGrid(shape=[1,1,X])
+            noise.genAsGrid(shape=size)
         for distFunc in fns.CellularDistanceFunction:
             noise.cell.distanceFunc = distFunc
             assert(noise.cell.distanceFunc == distFunc)
-            noise.genAsGrid(shape=[1,1,X])
-        
-        return
-
-    def coords(self, numWorkers):
-        noise = fns.Noise(seed=None, numWorkers=numWorkers)
-        coords = fns.emptyCoords(X)
-        coords[0,:] = np.arange(X)
-        coords[1,:] = np.arange(-X//2, X//2)
-        coords[2,:] = np.linspace(-1.0, 1.0, X)
-        noise.genFromCoords(coords)
-
-        # Re-use coords to make sure the array isn't accidentally free'd 
-        # in FastNoiseSIMD
-        noise2 = fns.Noise(seed=None, numWorkers=numWorkers)
-        noise2.genFromCoords(coords)
-        return
-
-    def test_grid_1(self):
-        self.grid(1)
-
-    def test_grid_4(self):
-        self.grid(4)
-
-    def test_coords_1(self):
-        self.coords(1)
-
-    def test_coords_4(self):
-        self.coords(4)
+            noise.genAsGrid(shape=size)
     
 
 def test(verbosity=2):

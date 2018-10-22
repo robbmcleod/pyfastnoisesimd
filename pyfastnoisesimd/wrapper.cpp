@@ -151,6 +151,20 @@ PyFNS_FreeNoiseSet(PyObject *self, PyObject *args)
 }
 */
 
+PyDoc_STRVAR(AlignedSize__doc__,
+             "AlignedSize(int size) -- Rounds the size up to the nearest aligned size for the current SIMD level.\n");
+static PyObject *
+PyFNS_AlignedSize(PyObject *self, PyObject *args)
+{
+    int size;
+    const char *format = "i";
+
+    if (!PyArg_ParseTuple(args, format, &size))
+    {
+        return NULL;
+    }
+    return Py_BuildValue("i", FastNoiseSIMD::AlignedSize(size));
+}
 
 PyDoc_STRVAR(GetSeed__doc__,
              "int GetSeed() -- Returns seed used for all noise types.\n");
@@ -602,6 +616,7 @@ PyFNS_FillNoiseSet(FNSObject *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
+/*
 PyDoc_STRVAR(NoiseFromCoords__doc__,
     "NoiseFromCoords(numpy.ndarray noise, numpy.ndarray coords)\
 -- Fill a noise set from arbitrary coordinates. Must be a shape (3,N) array of dtype 'float32'. \n");
@@ -627,6 +642,43 @@ PyFNS_NoiseFromCoords(FNSObject *self, PyObject *args)
     vector.ySet = (float *)PyArray_GETPTR2((PyArrayObject *)coordsObj, 1, offset);
     vector.zSet = (float *)PyArray_GETPTR2((PyArrayObject *)coordsObj, 2, offset);
     vector.size = (int)size;
+
+    Py_BEGIN_ALLOW_THREADS // Release GIL
+    self->fns->FillNoiseSet(noisePtr, &vector, 0.0f, 0.0f, 0.0f);
+    Py_END_ALLOW_THREADS
+
+    Py_RETURN_NONE;
+}
+*/
+
+PyDoc_STRVAR(NoiseFromCoords__doc__,
+    "NoiseFromCoords(numpy.ndarray noise, numpy.ndarray coords)\
+-- Fill a noise set from arbitrary coordinates. Must be a shape (3,N) array of dtype 'float32'. \n");
+static PyObject *
+PyFNS_NoiseFromCoords(FNSObject *self, PyObject *args)
+{
+    PyObject *noiseObj;
+    PyObject *xObj, *yObj, *zObj;
+    FastNoiseVectorSet vector;
+    npy_intp size, offset;
+    float *noisePtr;
+    const char *format = "OOOOnn";
+    // We pass in `size` so we can chunk arrays for multi-threaded operations.
+    if (!PyArg_ParseTuple(args, format, &noiseObj, &xObj, &yObj, &zObj, &size, &offset)) 
+    {
+        return NULL;
+    }
+    noisePtr = (float *)PyArray_GETPTR1((PyArrayObject *)noiseObj, offset);
+
+    // Typical confusion here, Numpy is [Z,Y,X], whereas PyFastNoiseSIMD is [X,Y,Z]
+    // but it makes no difference in the result, as long as we obey C-ordering
+    vector.xSet = (float *)PyArray_GETPTR1((PyArrayObject *)xObj, offset);
+    vector.ySet = (float *)PyArray_GETPTR1((PyArrayObject *)yObj, offset);
+    vector.zSet = (float *)PyArray_GETPTR1((PyArrayObject *)zObj, offset);
+    vector.size = (int)size;
+
+    // printf("EXT: Vector alignment error: (%lld, %lld, %lld)\n", 
+    //     (npy_intp)vector.xSet % 8, (npy_intp)vector.ySet % 8, (npy_intp)vector.zSet % 8);
 
     Py_BEGIN_ALLOW_THREADS // Release GIL
     self->fns->FillNoiseSet(noisePtr, &vector, 0.0f, 0.0f, 0.0f);
@@ -710,7 +762,7 @@ static PyMethodDef module_methods[] =
         //{"EmptySet", (PyCFunction)PyFNS_GetEmptySet, METH_VARARGS, GetEmptySet__doc__},
         //{"GetSIMDAlignment", (PyCFunction)PyFNS_GetSIMDAlignment, METH_VARARGS, GetSIMDAlignment__doc__},
         //{"FreeSet", (PyCFunction)PyFNS_FreeNoiseSet, METH_VARARGS, FreeNoiseSet__doc__},
-
+        {"AlignedSize", (PyCFunction)PyFNS_AlignedSize, METH_VARARGS, AlignedSize__doc__},
         {NULL, NULL},
 };
 

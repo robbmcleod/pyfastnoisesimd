@@ -4,8 +4,10 @@ import time
 import numpy.testing as npt
 
 
+print('**Note that if you have Hyperthreading the optimum thread count is the number of physical cores.**')
 N_thread = fns.num_virtual_cores()
-shape = [8, 1024, 1024]
+
+shape = [N_thread*2, 1024, 1024]
 print( 'Array shape: {}'.format(shape) )
 
 # Plot cellular noise with a gradient perturbation
@@ -81,14 +83,14 @@ npt.assert_array_almost_equal(perlin_single, perlin_multi)
 
 # Simple plotting.  matplotlib can also make movies.
 '''
+import matplotlib
 import matplotlib.pyplot as plt
-
 plt.figure()
 figManager = plt.get_current_fig_manager()
-# Tkinter
-figManager.window.state('zoomed')
-# Qt
-# figManager.window.showMaximized()
+if matplotlib.get_backend() == 'TkAgg':
+    figManager.window.state('zoomed')
+elif matplotlib.get_backend() == 'Qt5Agg':
+    figManager.window.showMaximized()
 for J in range(shape[0]):
     plt.subplot(121)
     plt.imshow( cell_single[J,:,:] )

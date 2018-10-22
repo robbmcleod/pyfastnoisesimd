@@ -12,7 +12,9 @@
 from pyfastnoisesimd.version import __version__
 
 from pyfastnoisesimd.helpers import (
-    empty_aligned, full_aligned, check_alignment, num_virtual_cores,
+    empty_aligned, full_aligned, empty_coords,
+    check_alignment, aligned_chunks,
+    num_virtual_cores,
     Noise, 
     NoiseType, FractalType, PerturbType, 
     CellularReturnType, CellularDistanceFunction)

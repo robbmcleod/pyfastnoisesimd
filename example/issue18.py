@@ -30,9 +30,9 @@ len_coords = 3470435
 coords = fns.empty_aligned((3,len_coords))
 for I in range(n_cycles):
     # print(f"\n    Iteration #{I}")
-    coords[0,:] = np.pi
-    coords[1,:] = 0.5
-    coords[2,:] = np.exp(1)
+    coords[0,:len_coords] = np.pi
+    coords[1,:len_coords] = 0.5
+    coords[2,:len_coords] = np.exp(1)
     result = n.genFromCoords(coords)
 
     mem2[I+1] = process.memory_info().rss / kB

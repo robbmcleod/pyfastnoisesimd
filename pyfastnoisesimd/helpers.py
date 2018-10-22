@@ -3,8 +3,7 @@ import concurrent.futures as cf
 import numpy as np
 from enum import Enum
 
-_MIN_CHUNK_SIZE = 4096
-
+_MIN_CHUNK_SIZE = 8192
 
 def empty_aligned(shape, dtype=np.float32, n_byte=ext.SIMD_ALIGNMENT):
     """
@@ -53,17 +52,112 @@ def full_aligned(shape, fill, dtype=np.float32, n_byte=ext.SIMD_ALIGNMENT):
     aligned.fill(fill)
     return aligned
 
+def empty_coords(length, dtype=np.float32, n_byte=ext.SIMD_ALIGNMENT):
+    """
+    """
+    dtype = np.dtype(dtype)
+    itemsize = dtype.itemsize
+
+    # We need to expand length to be a multiple of the vector size
+    vect_len = ext.SIMD_ALIGNMENT // itemsize
+    aligned_len = int(vect_len*np.ceil(length/vect_len))
+    shape = (3, aligned_len)
+
+    coords = empty_aligned(shape)
+
+    # Lots of trouble with passing sliced views out, with over-running the 
+    # array and seg-faulting on an invalid write.
+    # return coords[:,:length]
+    return coords
+
 def check_alignment(array):
     """
     Verifies that an array is aligned correctly for the supported SIMD level.
 
     Args:
-        array: a `numpy.ndarray` to check.
+        array: numpy.ndarray
 
     Returns:
         truth: bool
     """
     return ((ext.SIMD_ALIGNMENT - array.ctypes.data) % ext.SIMD_ALIGNMENT) == 0
+
+def check_coords(array):
+    """
+    Verifies that an array is aligned correctly for the supported SIMD level.
+
+    Args:
+        array: numpy.ndarray
+
+    Returns:
+        truth: bool
+    """
+    # print('  Array shape: ', array.shape)
+    # if array.base is not None:
+    #     print('  Base shape: ', array.base.shape)
+
+    base = array if array.base is None else array.base
+    # print('  Check alignment: ', check_alignment(array))
+    # print('  Base alignment error: ', (array.shape[1]*array.dtype.itemsize)%ext.SIMD_ALIGNMENT)
+    return check_alignment(array) \
+            and (array.shape[1] * array.dtype.itemsize) % ext.SIMD_ALIGNMENT == 0 == 0
+
+def aligned_chunks(array, n_chunks, axis=0):
+    """
+    An generator that divides an array into chunks that have memory
+    addresses compatible with SIMD vector length.
+
+    Args:
+        array: numpy.ndarray
+            the array to chunk
+        n_chunks: int
+            the desired number of chunks, the returned number _may_ be less.
+        axis: int
+            the axis to chunk on, similar to `numpy` axis commanes.
+
+    Returns
+        chunk: numpy.ndarray
+        start: Tuple[int]
+            the start indices of the chunk, in the `array`.
+    """
+    block_size = 1
+    if array.ndim > axis + 1:
+        block_size = np.product(array.shape[axis:])
+    # print(f'Got blocksize of {block_size}')
+
+    vect_len = ext.SIMD_ALIGNMENT // array.dtype.itemsize
+
+    if block_size % vect_len == 0:
+        # Iterate at-will, the underlying blocks have the correct shape
+        slice_size =  int(np.ceil(array.shape[axis] / n_chunks))
+    else:
+        # Round slice_size up to nearest vect_len
+        slice_size = int(vect_len*np.ceil(array.shape[axis] / n_chunks /vect_len))
+    # print('Slice size: ', slice_size)
+
+    offset = 0
+    chunk_index = 0
+    while(chunk_index < n_chunks):
+        # Dynamic slicing is pretty clumsy, unfortunately:
+        # https://stackoverflow.com/questions/24398708/slicing-a-numpy-array-along-a-dynamically-specified-axis#47859801
+        # so just use some nested conditions.
+        if axis == 0:
+            if array.ndim == 1:
+                chunk = array[offset:offset+slice_size]
+            else:
+                chunk = array[offset:offset+slice_size, ...]
+        elif axis == 1:
+            if array.ndim == 2:
+                chunk = array[:, offset:offset+slice_size]
+            else:
+                chunk = array[:, offset:offset+slice_size, ...]
+        elif axis == 2:
+            chunk = array[:, :, offset:offset+slice_size]
+
+        # print(f'Chunk has memory addr: {chunk.ctypes.data}, remain: {chunk.ctypes.data%ext.SIMD_ALIGNMENT}')
+        yield chunk, offset
+        offset += slice_size
+        chunk_index += 1
 
 
 def num_virtual_cores():
@@ -661,9 +755,12 @@ class Noise(object):
         Generates noise according to the set properties along a rectilinear 
         (evenly-spaced) grid.  
 
-        * shape:  the shape of the output noise volume.
-        * start: the starting coordinates for generation of the grid.
-          I.e. the coordinates are essentially `start: start + shape`
+        Args:
+            shape: Tuple[int]
+                the shape of the output noise volume. 
+            start: Tuple[int]
+                the starting coordinates for generation of the grid.
+                I.e. the coordinates are essentially `start: start + shape`
 
         Example::
 
@@ -678,42 +775,58 @@ class Noise(object):
 
         # There is a minimum array size before we bother to turn on futures.
         size = np.product(shape)
-        noise = empty_aligned(shape)
+        result = empty_aligned(shape)
+
+        # Shape could be 1 or 2D, so we need to expand it with singleton 
+        # dimensions for the FillNoiseSet call
+        if len(start) == 1:
+            start = [start[0], 0, 0]
+        elif len(start) == 2:
+            start = [start[0], start[1], 1]
+        else:
+            start = list(start)
+        start_zero = start[0]
 
         if self._num_workers <= 1 or size < _MIN_CHUNK_SIZE:
-            self._fns.FillNoiseSet(noise, *start, *shape)
-            return noise
+            # print('Grid single-threaded')
+            if len(shape) == 1:
+                shape = (*shape, 1, 1)
+            elif len(shape) == 2:
+                shape = (*shape, 1)
+            else:
+                shape = shape
+
+            self._fns.FillNoiseSet(result, *start, *shape)
+            return result
 
         # else run in threaded mode.
-        # Create a full shape empty array
-        # It would be nice to be able to split both on Z and Y if needed...
-        if shape[0] > 1:
-            chunkAxis = 0
-        elif shape[1] > 1:
-            chunkAxis = 1
-        else:
-            chunkAxis = 2
+        n_chunks = np.minimum(self._num_workers, shape[0]) 
+        # print(f'genAsGrid using {n_chunks} chunks')
         
-        numChunks = np.minimum(self._asyncExecutor._max_workers, shape[chunkAxis]) 
-        print(f'genAsGrid using {numChunks} chunks')
-
-        chunkedNoise = np.array_split(noise, numChunks, axis=chunkAxis)
-        chunkIndices = [pos[0] for pos in np.array_split(np.arange(shape[chunkAxis]), numChunks )]
-
+        # print('Grid multi-threaded')
         workers = []
-        for I, (chunk, chunkIndex) in enumerate(zip(chunkedNoise,chunkIndices)):
-            if chunk.shape == 0: # Empty array indicates we have more threads than chunks
-                continue
-            workers.append( 
-                self._asyncExecutor.submit(_chunk_noise_grid, 
-                        self._fns, chunk, chunkIndex, chunkAxis, start))
+        for I, (chunk, consumed) in enumerate(aligned_chunks(result, n_chunks, axis=0)):
+            # print(f'{I}: Got chunk of shape {chunk.shape} with {consumed} consumed')
+
+            if len(chunk.shape) == 1:
+                chunk_shape = (*chunk.shape, 1, 1)
+            elif len(chunk.shape) == 2:
+                chunk_shape = (*chunk.shape, 1)
+            else:
+                chunk_shape = chunk.shape
+
+            start[0] = start_zero + consumed
+            # print('len start: ', len(start), ', len shape: ', len(chunk_shape))
+            peon = self._asyncExecutor.submit(self._fns.FillNoiseSet, 
+                        chunk, *start, *chunk_shape)
+            workers.append(peon)
 
         for peon in workers:
             peon.result()
         # For memory management we have to tell NumPy it's ok to free the memory
         # region when it is dereferenced.
         # self._fns._OwnSplitArray(noise)
-        return noise
+        return result
 
     def genFromCoords(self, coords: np.ndarray) -> np.ndarray:
         """
@@ -743,46 +856,51 @@ class Noise(object):
         """
 
         if not isinstance(coords, np.ndarray):
-            raise TypeError('coords must be a `np.ndarry`, not ', type(coords))
+            raise TypeError('`coords` must be of type `np.ndarray`, not type: ', type(coords))
         if coords.ndim != 2:
-            raise ValueError('coords must be a 2D array')
+            raise ValueError('`coords` must be a 2D array')
         shape = coords.shape
         if shape[0] != 3:
-            raise ValueError('coords.shape[0] must equal 3')
-
-        length = shape[1]
+            raise ValueError('`coords.shape[0]` must equal 3')
+        if not check_alignment(coords):
+            raise ValueError('Memory alignment of `coords` is not valid')
         if coords.dtype != np.float32:
-            raise ValueError('coords must be of dtype `np.float32`')
+            raise ValueError('`coords` must be of dtype `np.float32`')
 
-        noise = empty_aligned(length)
-        if self._num_workers <= 1:
-            self._fns.NoiseFromCoords(noise, coords, length, 0)
-            return noise
+        itemsize = coords.dtype.itemsize
+        result = empty_aligned(shape[1])
+        if self._num_workers <= 1 or shape[1] < _MIN_CHUNK_SIZE:
+            self._fns.NoiseFromCoords(result, 
+                    coords[0,:], coords[1,:], coords[2,:], shape[1], 0)
+            return result
 
-        simdLen = ext.SIMD_ALIGNMENT
-        simdBlocks = length // simdLen
-        numWorkers = np.minimum(self._num_workers, simdBlocks)
-
-        chunkLen = (simdBlocks // numWorkers) * simdLen
-        chunkBytes = 4 * chunkLen
+        n_chunks = np.minimum(self._num_workers, 
+                shape[1] * itemsize / ext.SIMD_ALIGNMENT)
 
         workers = []
-        for I in range(numWorkers-1):
-            workers.append( 
-                self._asyncExecutor.submit( self._fns.NoiseFromCoords, 
-                            noise, coords, chunkLen, I*chunkLen))
-      
-        # Last worker takes any odd simdBlocks to the end of the array
-        lastChunkLen = length - (numWorkers-1)*chunkLen
-        I += 1
-        workers.append( 
-            self._asyncExecutor.submit(
-                self._fns.NoiseFromCoords,
-                noise, coords, lastChunkLen, I*chunkLen))
+        # for I, ((result_chunk, r_offset), (coord_chunk, offset)) in enumerate(zip(
+        #             aligned_chunks(result, self._num_workers, axis=0),
+        #             aligned_chunks(coords, self._num_workers, axis=1))):
+        vect_len = ext.SIMD_ALIGNMENT // itemsize
+        for I, (result_chunk, offset) in enumerate(
+                    aligned_chunks(result, self._num_workers, axis=0)):
 
+            # aligned_size = int(vect_len*np.ceil(result_chunk.size/vect_len))
+            # print(f'    {I}: Got chunk of length {result_chunk.size}, AlignedSize would be: {aligned_size}')
+            # print('    Offset: ', offset, ', offset error: ', offset % 8)
+
+            # zPtr = (coords[0,:].ctypes.data + offset) % 8
+            # yPtr = (coords[1,:].ctypes.data + offset) % 8
+            # xPtr = (coords[2,:].ctypes.data + offset) % 8
+            # print(f'    Pointer alignment: {zPtr, yPtr, xPtr}')
+            # peon = self._asyncExecutor.submit(self._fns.NoiseFromCoords, result, 
+            #     coords[0,:], coords[1,:], coords[2,:], aligned_size, offset)
+            peon = self._asyncExecutor.submit(self._fns.NoiseFromCoords, result, 
+                coords[0,:], coords[1,:], coords[2,:], result_chunk.size, offset)
+            workers.append(peon)
 
         for peon in workers:
             peon.result()
 
-        return noise
+        return result
         

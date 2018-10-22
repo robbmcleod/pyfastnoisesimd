@@ -55,10 +55,10 @@ def orthoProject(noise, tile2: int=512, p0: float=0., l0: float=0.) -> np.ndarra
     sqrtM1MuStar2 = np.sqrt(one - muStar*muStar)
 
     coords = fns.empty_aligned((3,maskLen)) # ask fastnoisesimd for a properly-shaped array
-    coords[0,:] = muStar                             # W
+    coords[0,:maskLen] = muStar                             # W
     test = sqrtM1MuStar2 * np.sin(alphaStar)  # V
-    coords[1,:] = test
-    coords[2,:] = sqrtM1MuStar2 * np.cos(alphaStar)  # U
+    coords[1,:maskLen] = test
+    coords[2,:maskLen] = sqrtM1MuStar2 * np.cos(alphaStar)  # U
 
     # Check our coordinates in 3-D to make sure the shape is correct:
     # fig = plt.figure()
