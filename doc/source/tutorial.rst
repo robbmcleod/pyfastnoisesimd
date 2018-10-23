@@ -103,7 +103,10 @@ Here is the complete source code::
         alphaStar = l0 + np.arctan2(xMasked, conjMuStar) 
         sqrtM1MuStar2 = np.sqrt(one - muStar*muStar)
 
-        coords = fns.emptyCoords(maskLen) # ask fastnoisesimd for a properly-shaped array
+        # Ask fastnoisesimd for a properly-shaped array
+        # Failure to use a coords array that is evenly divisible by the 
+        # SIMD vector length can cause a general protection fault.
+        coords = fns.empty_coords(maskLen) 
         coords[0,:maskLen] = muStar                             # W
         coords[1,:maskLen] = sqrtM1MuStar2 * np.sin(alphaStar)  # V
         coords[2,:maskLen] = sqrtM1MuStar2 * np.cos(alphaStar)  # U

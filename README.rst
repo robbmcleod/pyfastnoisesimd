@@ -136,6 +136,12 @@ Generated noise from 2666000 coordinates with 4 workers in 6.161e-03 s
 Release Notes
 -------------
 
+**0.4.0**
+
+* Fixed aligned memory location on Windows and enabled multi-threaded processing 
+  for both generators.
+* renamed `emptyCoords` function to `empty_coords`.
+
 **0.3.2**
 
 * Disabled aligned memory allocation on Windows, due to it causing seg-faults.
