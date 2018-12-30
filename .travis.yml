@@ -1,8 +1,9 @@
-sudo: true
 
-language: python
 
 # TODO: clang builds
+language: python
+sudo: required
+dist: xenial
 python:
   - 3.6
   - 3.7
