@@ -31,7 +31,7 @@ from glob import glob
 # pyfastnoisesimd version
 major_ver = 0
 minor_ver = 4
-nano_ver = 1
+nano_ver = 2
 
 branch = ''
 
