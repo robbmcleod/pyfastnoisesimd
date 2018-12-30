@@ -252,7 +252,6 @@ class CellularReturnType(Enum):
     Distance2Cave = 8
 
 
-
 class FractalClass(object):
     """ 
     Holds properties related to noise types that include fractal octaves.

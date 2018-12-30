@@ -31,7 +31,7 @@ from glob import glob
 # pyfastnoisesimd version
 major_ver = 0
 minor_ver = 4
-nano_ver = 0
+nano_ver = 1
 
 branch = ''
 
@@ -74,7 +74,7 @@ if os.name == 'nt':
             'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_avx512.cpp'
         ],
         'cflags': [
-            '/arch:AVX512',
+            '/arch:AVX512', '/arch:AVX512F',
         ],
     }
     avx2 = {
@@ -206,8 +206,7 @@ class build(_build):
             if gcc_version < (4,7): # Disable AVX2
                 disabled_libraries.append('avx2')
         elif plat_compiler.lower().startswith('msc'):
-            # No versions of Windows Python support AVX512 yet, it is supported in 
-            # MSVC2017 only.
+            # No versions of Windows Python support AVX512 yet
             #                 MSVC++ 14.1 _MSC_VER == 1911 (Visual Studio 2017)
             #                 MSVC++ 14.1 _MSC_VER == 1910 (Visual Studio 2017)
             # Python 3.5/3.6: MSVC++ 14.0 _MSC_VER == 1900 (Visual Studio 2015)
@@ -215,7 +214,10 @@ class build(_build):
             # Python 2.7:     MSVC++ 9.0  _MSC_VER == 1500 (Visual Studio 2008)
             # Here we just assume the user has the platform compiler
             msc_version = int(re.findall('v\.\d+', plat_compiler)[0].lstrip('v.'))
-            if msc_version < 1910:
+            # print('FOUND MSVC VERSION: ', msc_version)
+            # Still not working with MSVC2017 yet with 1915 and Python 3.7, it 
+            # cannot find the function `_mm512_floor_ps`
+            if msc_version < 1916:
                 disabled_libraries.append('avx512')
             if msc_version < 1900:
                 disabled_libraries.append('avx2')

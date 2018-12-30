@@ -136,6 +136,11 @@ Generated noise from 2666000 coordinates with 4 workers in 6.161e-03 s
 Release Notes
 -------------
 
+**0.4.1**
+
+* Support for Python 3.7 now official. On Windows AVX512 is still disabled as 
+  even with MSVC2017.3 some of the required SIMD instructions are unavailable.
+
 **0.4.0**
 
 * Fixed aligned memory location on Windows and enabled multi-threaded processing 

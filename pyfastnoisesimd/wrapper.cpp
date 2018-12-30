@@ -687,6 +687,55 @@ PyFNS_NoiseFromCoords(FNSObject *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
+/*
+Work in Progress: Map projections, starting with Kavraisky 7
+
+#define PI 3.141592653589793
+PyDoc_STRVAR(ProjectKav7__doc__,
+    "ProjectKav7(float radius, float tile_size, float p0, float l0)\
+-- Make a Kavraiskiy 7 projection from noise mapped to a sphere. \n");
+static PyObject *
+PyFNS_ProjectKav7(FNSObject *self, PyObject *args) {
+    // UNFINISHED
+    npy_float32 radius, alpha;
+    npy_float32 tile_size = 40.0f;
+    npy_float32 p0 = 0.0f;
+    npy_float32 l0 = 0.0f;
+    npy_intp x_max, y_max;
+    npy_float64 phi;
+    const char *format = "f|fff";
+
+    if (!PyArg_ParseTuple(args, format, &radius, &tile_size, &p0, &l0)) {
+        return NULL;
+    }
+
+    alpha = radius / tile_size;
+    // Dimensions/mask
+    // Then how many steps in x as a function of distance from equator?
+    // y_max = 0.5*pi*alpha = 1.5707963267948966 * alpha
+    y_max = (npy_intp)(1.5707963267948966 * alpha);
+    // x_max = 1.5*sqrt(1/3)*pi*alpha = 2.7206990463513265 * alpha
+    x_max= (npy_intp)(2.7206990463513265 * alpha);
+    // Total map shape is [2*y_shape, 2*x_shape]
+
+    // Generate empty coords
+
+    // Allocate a 2D array for the greyscale noise result
+
+
+    // TODO: drop the GIL
+
+
+    // TODO: re-acquire the GIL
+
+
+    phi = -PI/2.0;
+
+    // TODO: return a numpy array.
+    Py_RETURN_NONE;
+}
+*/
+
 static PyMethodDef FNS_methods[] = {
     {"GetSeed", (PyCFunction)PyFNS_GetSeed, METH_VARARGS, GetSeed__doc__},
     {"SetSeed", (PyCFunction)PyFNS_SetSeed, METH_VARARGS, SetSeed__doc__},
@@ -713,6 +762,7 @@ static PyMethodDef FNS_methods[] = {
     // {"GetNoiseSet", (PyCFunction)PyFNS_GetNoiseSet, METH_VARARGS, GetNoiseSet__doc__},
     {"FillNoiseSet", (PyCFunction)PyFNS_FillNoiseSet, METH_VARARGS, FillNoiseSet__doc__},
     {"NoiseFromCoords", (PyCFunction)PyFNS_NoiseFromCoords, METH_VARARGS, NoiseFromCoords__doc__},
+    // {"ProjectKav7", (PyCFunction)PyFNS_ProjectKav7, METH_VARARGS, ProjectKav7__doc__},
     {NULL, NULL, 0, NULL},
 };
 
