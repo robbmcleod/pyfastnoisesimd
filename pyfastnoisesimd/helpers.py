@@ -59,7 +59,7 @@ def empty_coords(length, dtype=np.float32, n_byte=ext.SIMD_ALIGNMENT):
     itemsize = dtype.itemsize
 
     # We need to expand length to be a multiple of the vector size
-    vect_len = ext.SIMD_ALIGNMENT // itemsize
+    vect_len = max(ext.SIMD_ALIGNMENT // itemsize, 1)
     aligned_len = int(vect_len*np.ceil(length/vect_len))
     shape = (3, aligned_len)
 
@@ -125,7 +125,7 @@ def aligned_chunks(array, n_chunks, axis=0):
         block_size = np.product(array.shape[axis:])
     # print(f'Got blocksize of {block_size}')
 
-    vect_len = ext.SIMD_ALIGNMENT // array.dtype.itemsize
+    vect_len = max(ext.SIMD_ALIGNMENT // array.dtype.itemsize, 1)
 
     if block_size % vect_len == 0:
         # Iterate at-will, the underlying blocks have the correct shape
@@ -886,7 +886,6 @@ class Noise(object):
         # for I, ((result_chunk, r_offset), (coord_chunk, offset)) in enumerate(zip(
         #             aligned_chunks(result, self._num_workers, axis=0),
         #             aligned_chunks(coords, self._num_workers, axis=1))):
-        vect_len = ext.SIMD_ALIGNMENT // itemsize
         for I, (result_chunk, offset) in enumerate(
                     aligned_chunks(result, self._num_workers, axis=0)):
 
