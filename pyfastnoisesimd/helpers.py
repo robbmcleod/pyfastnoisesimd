@@ -774,6 +774,10 @@ class Noise(object):
 
         # There is a minimum array size before we bother to turn on futures.
         size = np.product(shape)
+        # size needs to be evenly divisible by ext.SIMD_ALINGMENT
+        if np.remainder(size, ext.SIMD_ALIGNMENT/np.dtype(np.float32).itemsize) != 0.0:
+            raise ValueError('The size of the array (in bytes) must be evenly divisible by the SIMD vector length')
+
         result = empty_aligned(shape)
 
         # Shape could be 1 or 2D, so we need to expand it with singleton 
@@ -865,6 +869,8 @@ class Noise(object):
             raise ValueError('Memory alignment of `coords` is not valid')
         if coords.dtype != np.float32:
             raise ValueError('`coords` must be of dtype `np.float32`')
+        if np.remainder(coords.shape[1], ext.SIMD_ALIGNMENT/np.dtype(np.float32).itemsize) != 0.0:
+            raise ValueError('The number of coordinates must be evenly divisible by the SIMD vector length')
 
         itemsize = coords.dtype.itemsize
         result = empty_aligned(shape[1])
