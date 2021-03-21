@@ -31,7 +31,7 @@ grid::
     perlin.fractal.octaves = 4
     perlin.fractal.lacunarity = 2.1
     perlin.fractal.gain = 0.45
-    perlin.perturb.perturbType = fns.PerturbType.NoPertrub
+    perlin.perturb.perturbType = fns.PerturbType.NoPerturb
     result = perlin.genAsGrid(shape)
 
 where ``result`` is a 3D ``numpy.ndarray`` of dtype ``'float32'``. Alternatively, 
