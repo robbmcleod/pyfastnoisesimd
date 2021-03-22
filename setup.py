@@ -61,7 +61,7 @@ lib_dirs = []
 libs = []
 def_macros = []
 
-with open('README.rst') as fh:
+with open('README.md') as fh:
     long_desc = fh.read()
 
 with open('requirements.txt') as fh:
