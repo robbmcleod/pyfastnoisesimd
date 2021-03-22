@@ -14,14 +14,12 @@ The number of threads, defaults to the number of virtual cores on the system. Th
 ideal number of threads is typically the number of physical cores, irrespective 
 of Intel Hyperthreading®. 
 
-Source and Windows Python 3.6 wheels are provided.
-
 Here is a simple example to generate Perlin-style noise on a 3D rectilinear 
 grid::
 
     import pyfastnoisesimd as fns
     import numpy as np
-    shape = [512,512,512]
+    shape = [512, 512, 512]
     seed = np.random.randint(2**31)
     N_threads = 4
 
@@ -63,14 +61,13 @@ Installation
     pip install --upgrade setuptools
     pip install -v pyfastnoisesimd
 
-On Windows, a wheel is provided for Python 3.6 only. Building from source or 
-compiling the extension for 3.5 will require either MS Visual Studio 2015 or 
-MSVC2015 Build Tools:
+Wheels are provided for Windows, Mac OSX, and Linux via `manywheels`.
+
+Building from source on Windows will require the appropriate MS Visual Studio 
+version for your version of Python, or MSVC Build Tools:
 
 http://landinghub.visualstudio.com/visual-cpp-build-tools
 
-No Python versions compile with MSVC2017 yet, which is the newest version to 
-support AVX512. Only Python 3.5/3.6 support AVX2 on Windows.
 
 On Linux or OSX, only a source distribution is provided and installation 
 requires `gcc` or `clang`. For AVX512 support with GCC, GCC7.2+ is required, lower 
@@ -137,7 +134,8 @@ Release Notes
 -------------
 **0.4.2**
 
-- 
+- Wheels are now built via GitHub Actions and available on PyPi.
+- Support for Python 3.8 and 3.9 added. Support for Python 3.5 was dropped.
 
 **0.4.1**
 

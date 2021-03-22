@@ -652,7 +652,7 @@ class Noise(object):
         self.cell = CellularClass(self._fns)
         self.perturb = PerturbClass(self._fns)
 
-        if bool(seed):
+        if seed is not None:
             self.seed = seed # calls setter
         else:
             self.seed = np.random.randint(-2147483648, 2147483647)
