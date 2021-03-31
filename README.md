@@ -132,6 +132,11 @@ Generated noise from 2666000 coordinates with 4 workers in 6.161e-03 s
     
 Release Notes
 -------------
+
+**0.4.3**
+
+- **Under development.**
+
 **0.4.2**
 
 - Wheels are now built via GitHub Actions and available on PyPi.

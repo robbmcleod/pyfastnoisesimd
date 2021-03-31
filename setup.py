@@ -31,11 +31,11 @@ from glob import glob
 # pyfastnoisesimd version
 major_ver = 0
 minor_ver = 4
-nano_ver = 2
+nano_ver = 3
 
-branch = ''
+branch = 'dev0'
 
-VERSION = "%d.%d.%d%s" % (major_ver, minor_ver, nano_ver, branch)
+VERSION = "%d.%d.%d.%s" % (major_ver, minor_ver, nano_ver, branch)
 
 # Create the version.py file
 open('pyfastnoisesimd/version.py', 'w').write('__version__ = "%s"\n' % VERSION)
