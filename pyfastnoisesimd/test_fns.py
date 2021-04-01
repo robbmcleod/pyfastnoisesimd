@@ -16,7 +16,8 @@ log = Logger(__name__)
 # X is block size.
 # For AVX512, if we want to have 4 workers we should have at least 16 x 4 
 # blocks.
-SIMD_LEN= fns.extension.SIMD_ALIGNMENT // np.dtype(np.float32).itemsize
+SIMD_LEN = max(
+    fns.extension.SIMD_ALIGNMENT // np.dtype(np.float32).itemsize, 1)
 CHUNK = fns.helpers._MIN_CHUNK_SIZE
 CHUNK2 = int(np.ceil(np.sqrt(CHUNK) / SIMD_LEN) * SIMD_LEN)
 CHUNK3 = int(np.ceil(np.cbrt(CHUNK) / SIMD_LEN) * SIMD_LEN)
