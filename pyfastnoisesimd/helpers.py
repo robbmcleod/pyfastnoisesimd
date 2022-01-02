@@ -766,8 +766,10 @@ class Noise(object):
             import numpy as np
             import pyfastnoisesimd as fns 
             noise = fns.Noise()
-            result = noise.genFromGrid(shape=[256,256,256], start=[0,0,0])
-            nextResult = noise.genFromGrid(shape=[256,256,256], start=[256,0,0])
+            result = noise.genAsGrid(shape=[256,256,256], start=[0,0,0])
+            nextResult = noise.genAsGrid(shape=[256,256,256], start=[256,0,0])
+
+        See the `example` directory for more complete examples.
         """
         if isinstance(shape, (int, np.integer)):
             shape = (shape,)
