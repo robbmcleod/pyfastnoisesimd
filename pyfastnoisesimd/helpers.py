@@ -122,7 +122,7 @@ def aligned_chunks(array, n_chunks, axis=0):
     """
     block_size = 1
     if array.ndim > axis + 1:
-        block_size = np.product(array.shape[axis:])
+        block_size = np.prod(array.shape[axis:])
     # print(f'Got blocksize of {block_size}')
 
     vect_len = max(ext.SIMD_ALIGNMENT // array.dtype.itemsize, 1)
@@ -775,7 +775,7 @@ class Noise(object):
             shape = (shape,)
 
         # There is a minimum array size before we bother to turn on futures.
-        size = np.product(shape)
+        size = np.prod(shape)
         # size needs to be evenly divisible by ext.SIMD_ALINGMENT
         if np.remainder(size, ext.SIMD_ALIGNMENT/np.dtype(np.float32).itemsize) != 0.0:
             raise ValueError('The size of the array (in bytes) must be evenly divisible by the SIMD vector length')
