@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ########################################################################
 #
 #       pyfastnoisesimd
@@ -15,7 +14,6 @@ from __future__ import print_function
 import os
 import platform
 import re
-import sys
 import tempfile
 import subprocess
 
@@ -25,28 +23,25 @@ from distutils.errors import CCompilerError, DistutilsOptionError
 from distutils.sysconfig import customize_compiler
 from setuptools import Extension
 from setuptools import setup
-from glob import glob
 
-
-# pyfastnoisesimd version
+# `pyfastnoisesimd` version
 major_ver = 0
 minor_ver = 4
 nano_ver = 3
-
 branch = ''
 
-VERSION = "%d.%d.%d.%s" % (major_ver, minor_ver, nano_ver, branch)
+VERSION = f'{major_ver}.{minor_ver}.{nano_ver}.{branch}' if branch else f'{major_ver}.{minor_ver}.{nano_ver}'
 
 # Create the version.py file
 open('pyfastnoisesimd/version.py', 'w').write('__version__ = "%s"\n' % VERSION)
 
 # Sources and headers
 sources = [
-    'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD.cpp',
-    'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_internal.cpp',
-    'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_neon.cpp',
-    'pyfastnoisesimd/wrapper.cpp',
-]
+        'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD.cpp',
+        'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_internal.cpp',
+        'pyfastnoisesimd/fastnoisesimd/FastNoiseSIMD_neon.cpp',
+        'pyfastnoisesimd/wrapper.cpp',
+    ]
 
 # For (some versions of) `pip`, the first command run is `python setup.py egg_info` 
 # which crashes if `numpy` is not present, so we protect it here.
@@ -298,10 +293,10 @@ Intended Audience :: Developers
 Intended Audience :: Information Technology
 License :: OSI Approved :: BSD License
 Programming Language :: Python
-Programming Language :: Python :: 3.6
-Programming Language :: Python :: 3.7
 Programming Language :: Python :: 3.8
 Programming Language :: Python :: 3.9
+Programming Language :: Python :: 3.10
+Programming Language :: Python :: 3.11
 Topic :: Software Development :: Libraries :: Python Modules
 Topic :: Multimedia :: Graphics :: 3D Modeling
 Operating System :: Microsoft :: Windows

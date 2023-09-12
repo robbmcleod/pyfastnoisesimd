@@ -20,7 +20,7 @@ Preliminaries
 
     `git commit -a -m "Getting ready for release X.Y.Z"`
 
-* If the directories `dist` or `artifact` exist, delete them.
+* If the directory `artifact` exists, delete it.
 
 Tagging
 -------
@@ -43,10 +43,7 @@ Build Wheels
 ------------
 
 * Check on GitHub Actions `github.com/robbmcleod/pyfastnoisesimd/actions` that all the wheels built successfully.
-* Download `artifacts.zip` and unzip.
-* Make the source tarball with the command
-
-    `python setup.py sdist`
+* Download `artifacts.zip` and unzip. 
 
 Releasing
 ---------
@@ -57,7 +54,7 @@ Releasing
 
 * Upload the source distribution.
 
-    `twine upload dist/pyfastnoisesimd-X.Y.Z.tar.gz`
+    `twine upload artifact/pyfastnoisesimd*.tar.gz`
 
 * Check on `pypi.org/project/pyfastnoisesimd/#files` that the wheels and source have uploaded as expected.
 
