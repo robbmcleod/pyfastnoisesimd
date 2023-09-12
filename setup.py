@@ -33,7 +33,7 @@ major_ver = 0
 minor_ver = 4
 nano_ver = 3
 
-branch = 'dev0'
+branch = ''
 
 VERSION = "%d.%d.%d.%s" % (major_ver, minor_ver, nano_ver, branch)
 
