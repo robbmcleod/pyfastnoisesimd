@@ -13,6 +13,12 @@ jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+
+    env:
+      CIBW_BUILD: ${{ matrix.cibw_build }}
+
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
