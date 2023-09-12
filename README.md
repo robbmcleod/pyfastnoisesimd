@@ -135,7 +135,8 @@ Release Notes
 
 **0.4.3**
 
-- **Under development.**
+- Version bump to add wheels for Python 3.10 and 3.11. Support for 3.6 and 3.7 
+  have been dropped.
 
 **0.4.2**
 
